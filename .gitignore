@@ -1,0 +1,10 @@
+# Credenciales locales de la base de datos
+config/conexion.php
+
+# Plantillas / archivos locales grandes (Excel)
+*.xlsx
+
+# Basura de sistema operativo
+Thumbs.db
+.DS_Store
+desktop.ini

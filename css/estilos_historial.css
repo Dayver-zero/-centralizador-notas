@@ -1,0 +1,387 @@
+/* ============================================
+   ESTILOS - HISTORIAL ACADÉMICO
+   Hojas calcadas de RUBEN SISTEMAS.xlsx (Entrega)
+   e historial.xlsx (Kardex)
+   ============================================ */
+
+.historial-container {
+    margin-left: 0;
+    margin-top: 80px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.historial-container h1 {
+    color: #222;
+    margin-bottom: 15px;
+}
+
+.modo-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.filtro-form {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.filtro-form .form-group {
+    margin-bottom: 0;
+}
+
+.filtro-form .form-group label {
+    display: block;
+    color: #007acc;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+}
+
+.btn-print {
+    margin-top: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+}
+
+/* ---- Hoja en blanco (formulario impreso) ---- */
+.sheet {
+    background: #fff;
+    color: #000;
+    border: 1px solid #bbb;
+    border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+    padding: 18px 22px 24px;
+    margin-bottom: 10px;
+    min-width: 900px;
+}
+
+/* Cabecera con logo y nombre de la institución */
+.sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.sheet-logo {
+    height: 62px;
+}
+
+.sheet-school {
+    text-align: center;
+    flex: 1;
+}
+
+.inst-1 {
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.inst-2 {
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.sheet-title {
+    text-align: center;
+    font-size: 15pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    border: 1.5px solid #000;
+    padding: 5px 8px;
+    margin-bottom: 16px;
+}
+
+/* ---- Campos del formulario (Entrega) ---- */
+.tabla-fields {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+}
+
+.tabla-fields td {
+    border: 1px solid #000;
+    padding: 4px 8px;
+    font-size: 8.5pt;
+    color: #000;
+}
+
+.f-lbl {
+    width: 210px;
+    font-weight: 700;
+    background: #e3e9ef;
+    color: #000;
+}
+
+.f-val {
+    font-weight: 600;
+}
+
+/* ---- Tabla de entregas ---- */
+.tabla-entrega,
+.tabla-kardex {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+}
+
+.tabla-entrega th,
+.tabla-entrega td,
+.tabla-kardex th,
+.tabla-kardex td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: center;
+    white-space: nowrap;
+    color: #000;
+}
+
+.tabla-entrega th,
+.tabla-kardex th {
+    background: #dbe3ea;
+    color: #000;
+    font-weight: 700;
+    font-size: 7.5pt;
+}
+
+.tabla-entrega .td-nombre,
+.tabla-kardex .td-nombre {
+    text-align: left;
+    padding-left: 8px;
+    font-weight: 600;
+    min-width: 230px;
+}
+
+.tabla-entrega .th-nro,
+.tabla-kardex th:first-child {
+    width: 32px;
+}
+
+.tabla-entrega .th-nombre {
+    min-width: 260px;
+}
+
+.sin-datos {
+    text-align: center;
+    padding: 18px;
+    font-style: italic;
+}
+
+/* ---- Firmas (Entrega) ---- */
+.firmas {
+    display: flex;
+    justify-content: space-between;
+    padding: 30px 40px 6px;
+}
+
+.firma {
+    text-align: center;
+    width: 300px;
+}
+
+.firma-linea {
+    border-bottom: 1px solid #000;
+    margin-bottom: 6px;
+}
+
+.firma-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* ---- Encabezado Kardex ---- */
+.kardex-enc {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.kardex-enc td {
+    border: 1px solid #000;
+    padding: 4px 8px;
+    font-size: 8.5pt;
+    color: #000;
+}
+
+.enc-lab {
+    font-weight: 700;
+    background: #e3e9ef;
+    color: #000;
+    width: 200px;
+}
+
+.enc-val {
+    font-weight: 600;
+    min-width: 220px;
+}
+
+.enc-vacio {
+    background: #fdfdfd;
+}
+
+/* ---- Lugar y fecha / Firma de autoridad (Kardex) ---- */
+.kardex-lugar {
+    margin: 18px 0 8px;
+    font-size: 9pt;
+}
+
+.kardex-lugar .k-lbl {
+    font-weight: 700;
+}
+
+.kardex-lugar .k-val {
+    font-weight: 600;
+}
+
+.firma-autoridad {
+    text-align: right;
+    margin: 26px 10px 24px 0;
+}
+
+.firma-autoridad .fa-linea {
+    border-bottom: 1px solid #000;
+    width: 280px;
+    margin-left: auto;
+    margin-bottom: 6px;
+}
+
+.firma-autoridad .fa-label {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ---- ESCALA DE VALORACIÓN (Kardex) ---- */
+.tabla-escala {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+}
+
+.tabla-escala td {
+    border: 1px solid #000;
+    padding: 4px 8px;
+    text-align: center;
+    white-space: nowrap;
+    color: #000;
+}
+
+.tabla-escala .es-tit {
+    font-weight: 700;
+    background: #dbe3ea;
+    color: #000;
+}
+
+.tabla-escala .es-der {
+    font-weight: 700;
+    text-align: right;
+}
+
+.tabla-escala .es-nota {
+    text-align: center;
+    font-style: italic;
+    padding: 6px 8px;
+}
+
+/* ============================================
+   MODO OSCURO: las hojas siempre se ven como papel
+   (fondo blanco y texto negro)
+   ============================================ */
+body.dark-mode .sheet {
+    background: #fff;
+}
+
+body.dark-mode .sheet,
+body.dark-mode .sheet th,
+body.dark-mode .sheet td {
+    color: #000;
+}
+
+body.dark-mode .historial-container h1 {
+    color: #fff;
+}
+
+/* ============================================
+   IMPRESIÓN (A4 horizontal)
+   ============================================ */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 8mm 7mm;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .menu-lateral,
+    canvas,
+    .top-header,
+    .btn,
+    .modo-switch,
+    .filtro-form {
+        display: none !important;
+    }
+
+    .historial-container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .historial-container h1 {
+        display: none !important;
+    }
+
+    .sheet {
+        background: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        min-width: 0 !important;
+    }
+
+    .sheet-title {
+        border: 1.5px solid #000;
+        font-size: 13pt;
+    }
+
+    .tabla-fields td,
+    .kardex-enc td,
+    .tabla-entrega th,
+    .tabla-entrega td,
+    .tabla-kardex th,
+    .tabla-kardex td,
+    .tabla-escala td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+    }
+
+    .tabla-entrega th,
+    .tabla-kardex th,
+    .tabla-fields .f-lbl,
+    .kardex-enc .enc-lab {
+        background: #dbe3ea !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .firma-linea,
+    .kardex-lugar .k-val,
+    .firma-autoridad .fa-linea {
+        border-bottom: 1px solid #000;
+    }
+}

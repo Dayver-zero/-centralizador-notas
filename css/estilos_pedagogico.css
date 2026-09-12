@@ -1,0 +1,459 @@
+/* ============================================
+   ESTILOS - REGISTRO PEDAGOGICO
+   Hoja calcada de REGISTRO.xlsx
+   ============================================ */
+
+.reg-container {
+    margin-left: 0;
+    margin-top: 80px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.reg-btns {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.reg-btns .btn {
+    padding: 10px 18px;
+    font-size: 0.85rem;
+}
+
+.reg-col-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.reg-col-ctrl select {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.reg-col-ctrl .btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-print {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+}
+
+/* ---- Hoja en blanco (formulario impreso) ---- */
+.reg-sheet {
+    background: #fff;
+    color: #000;
+    border: 1px solid #bbb;
+    border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+    padding: 16px 18px 22px;
+    min-width: 1300px;
+}
+
+/* Título en 3 líneas (A1:AT3) */
+.reg-tit {
+    text-align: center;
+    font-size: 15pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1.15;
+}
+
+.reg-tit2 {
+    text-align: center;
+    font-size: 15pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1.15;
+}
+
+.reg-tit3 {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    text-decoration: underline;
+}
+
+/* ---- Tarjeta cabecera (A5:AT7) ---- */
+.reg-card {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+}
+
+.reg-card td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 8pt;
+    vertical-align: middle;
+    color: #000;
+}
+
+.reg-card-logo {
+    width: 78px;
+    text-align: center;
+}
+
+.reg-card-logo img {
+    height: 58px;
+}
+
+.reg-card-rot {
+    width: 74px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.reg-card-rot span {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    display: inline-block;
+    letter-spacing: 1px;
+}
+
+.reg-card-big {
+    width: 180px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.reg-card-lab {
+    width: 84px;
+    font-weight: 700;
+}
+
+.reg-card-val {
+    width: 220px;
+}
+
+.reg-card-obs {
+    width: 130px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.reg-card-obs::before {
+    content: "OBSERVACIÓN";
+    display: block;
+    font-weight: 700;
+}
+
+/* ---- Edicion de la tarjeta ---- */
+.editable {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.editable:hover { outline: 1px dashed #0a6cd6; outline-offset: -1px; }
+
+.editable.editing,
+.reg-card td.editable.editing {
+    background: #fff9db !important;
+    outline: 2px solid #0a6cd6;
+    outline-offset: -1px;
+}
+
+.editable.dirty,
+.reg-card-logo.dirty {
+    outline: 2px solid #e8a33d;
+    outline-offset: -1px;
+}
+
+.editable.ok    { background: #d9f7e2 !important; }
+.editable.err   { background: #fbdcdc !important; }
+.reg-card-logo.editable-logo img { cursor: pointer; }
+
+/* ---- Tabla principal ---- */
+.reg-scroll {
+    overflow-x: auto;
+}
+
+.reg-tabla {
+    width: 100%;
+    min-width: 1280px;
+    border-collapse: collapse;
+    font-size: 7.5pt;
+    color: #000;
+}
+
+.reg-tabla th,
+.reg-tabla td {
+    border: 1px solid #000;
+    padding: 2px 3px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    color: #000;
+    background: #fff;
+}
+
+.reg-tabla th {
+    background: #dbe3ea;
+    color: #000;
+    font-weight: 700;
+    font-size: 6.8pt;
+    line-height: 1.15;
+}
+
+.reg-tabla .reg-nombre {
+    text-align: left;
+    font-weight: 700;
+    width: 190px;
+}
+
+.reg-tabla td.reg-nombre {
+    text-align: left;
+    padding-left: 6px;
+    font-weight: 600;
+    min-width: 170px;
+}
+
+.reg-nro { width: 26px; }
+.reg-asist { width: 38px; }
+.reg-pct { width: 44px; }
+
+.reg-asistencia-tit { background: #b7e0c4; }
+.reg-cuarto        { background: #cfe9d9; }
+.reg-fecha         { background: #e2f2e8; font-weight: 700; min-width: 34px; }
+.reg-fecha-break   { background: #eef7f1; }
+.reg-teoria-tit    { background: #f2e3a7; }
+.reg-conocer-tit   { background: #f6e8bd; }
+.reg-eval          { background: #faf0cd; }
+.reg-num           { background: #fbf3d8; min-width: 26px; }
+.reg-practica-tit  { background: #c3d7f0; }
+.reg-hacer-tit     { background: #d5e4f8; }
+.reg-proy          { background: #e3eefa; }
+.reg-ser-tit       { background: #dec9f2; }
+.reg-ser-vert      { background: #e6d7f8; min-width: 30px; line-height: 1.05; }
+.reg-suma-tit      { background: #bfe0e6; }
+.reg-suma-val      { background: #dceff2; min-width: 42px; }
+
+.reg-asist-cel {
+    cursor: pointer;
+    font-weight: 700;
+    min-width: 32px;
+    transition: background 0.2s;
+}
+
+.reg-asist-cel:hover { background: #cfe3d4; }
+
+.asist-presente    { background: #d6f0da; color: #0a5c18; }
+.asist-ausente     { background: #f8d7d9; color: #8a1418; }
+.asist-justificado { background: #fbeccb; color: #7a5300; }
+
+.reg-conocer-cel, .reg-hacer-cel, .reg-ser-cel {
+    cursor: pointer;
+    min-width: 26px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.reg-tabla tbody tr:hover .reg-conocer-cel,
+.reg-tabla tbody tr:hover .reg-hacer-cel,
+.reg-tabla tbody tr:hover .reg-ser-cel { background: #f0f0f0; }
+
+.reg-parcial {
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 0.2s;
+}
+
+.reg-parcial:hover { background: #cfe0e6; }
+
+.fila-vacia td { background: #fff; }
+
+/* Separador horizontal visible entre estudiantes */
+.reg-tabla tbody tr td {
+    border-bottom: 2.5px solid #000;
+}
+
+.reg-empty {
+    padding: 22px;
+    text-align: center;
+    font-size: 10pt;
+}
+
+/* ---- INDICADORES ---- */
+.reg-indicadores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 16px;
+    border: 1px solid #000;
+    border-right: none;
+}
+
+.reg-ind-col {
+    border-right: 1px solid #000;
+}
+
+.reg-ind-tit {
+    background: #dbe3ea;
+    color: #000;
+    font-weight: 700;
+    font-size: 8pt;
+    text-align: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid #000;
+}
+
+.reg-ind-ser {
+    border-top: 1px solid #000;
+}
+
+.reg-ind-col ol {
+    margin: 4px 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: reg;
+    font-size: 7.5pt;
+    line-height: 1.9;
+}
+
+.reg-ind-col ol li {
+    counter-increment: reg;
+    padding-left: 26px;
+    position: relative;
+    border-bottom: 1px dotted #999;
+    margin: 0 8px;
+}
+
+.reg-ind-col ol li::before {
+    content: counter(reg) ".";
+    position: absolute;
+    left: 4px;
+    font-weight: 700;
+}
+
+.reg-ind-col ol li:last-child { border-bottom: none; }
+
+/* ---- Footer ---- */
+.reg-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 22px;
+    padding: 0 10px;
+    font-size: 8.5pt;
+}
+
+.reg-footer-item {
+    font-weight: 600;
+}
+
+.reg-borde-bajo {
+    border-bottom: 1px solid #000;
+    padding-bottom: 3px;
+}
+
+/* ============================================
+   MODO OSCURO: la hoja siempre se ve como papel
+   (fondo blanco y texto negro)
+   ============================================ */
+body.dark-mode .reg-sheet {
+    background: #fff;
+}
+
+body.dark-mode .reg-sheet,
+body.dark-mode .reg-sheet th,
+body.dark-mode .reg-sheet td {
+    color: #000;
+}
+
+body.dark-mode .reg-sheet .asist-presente    { color: #0a5c18; }
+body.dark-mode .reg-sheet .asist-ausente     { color: #8a1418; }
+body.dark-mode .reg-sheet .asist-justificado { color: #7a5300; }
+
+/* ============================================
+   IMPRESIÓN (A4 horizontal)
+   ============================================ */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 8mm 7mm;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .menu-lateral,
+    canvas,
+    .top-header,
+    .reg-btns,
+    .modal-overlay,
+    .alert {
+        display: none !important;
+    }
+
+    .reg-container {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .reg-sheet {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        min-width: 0 !important;
+    }
+
+    .reg-tit, .reg-tit2 { font-size: 13pt; }
+    .reg-tit3 { font-size: 12pt; margin-bottom: 8px; }
+
+    .reg-card td {
+        font-size: 8pt;
+        padding: 3px 5px;
+    }
+
+    .reg-scroll { overflow: visible !important; }
+
+    .reg-tabla {
+        min-width: 0 !important;
+        font-size: 7.5pt;
+    }
+
+    .reg-tabla th, .reg-tabla td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    .reg-tabla tbody tr td {
+        border-bottom: 2.5px solid #000 !important;
+    }
+
+    .reg-tabla th {
+        background: #dbe3ea !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .reg-asist-cel { min-width: 22px; }
+    .reg-fecha { min-width: 26px; }
+
+    .reg-ind-tit { font-size: 8pt; }
+    .reg-ind-col ol { font-size: 7.5pt; }
+
+    .reg-footer { margin-top: 16px; }
+}
