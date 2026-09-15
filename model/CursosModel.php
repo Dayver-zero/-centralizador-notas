@@ -9,7 +9,7 @@ class CursosModel {
     }
 
     public function getAll() {
-        $sql = "SELECT c.*, ca.nombre AS carrera_nombre FROM cursos c
+        $sql = "SELECT c.*, ca.nombre AS carrera_nombre, ca.tipo AS carrera_tipo, ca.duracion AS carrera_duracion FROM cursos c
                 JOIN carreras ca ON c.carrera_id = ca.id
                 ORDER BY c.gestion DESC, c.nombre, c.paralelo";
         $result = $this->conn->query($sql);
@@ -35,7 +35,7 @@ class CursosModel {
     }
 
     public function getByGestion($gestion) {
-        $sql = "SELECT c.*, ca.nombre AS carrera_nombre FROM cursos c
+        $sql = "SELECT c.*, ca.nombre AS carrera_nombre, ca.tipo AS carrera_tipo, ca.duracion AS carrera_duracion FROM cursos c
                 JOIN carreras ca ON c.carrera_id = ca.id
                 WHERE c.gestion = ?
                 ORDER BY c.nombre, c.paralelo";
@@ -52,7 +52,7 @@ class CursosModel {
     }
 
     public function getById($id) {
-        $stmt = $this->conn->prepare("SELECT c.*, ca.nombre AS carrera_nombre FROM cursos c JOIN carreras ca ON c.carrera_id = ca.id WHERE c.id = ?");
+        $stmt = $this->conn->prepare("SELECT c.*, ca.nombre AS carrera_nombre, ca.tipo AS carrera_tipo, ca.duracion AS carrera_duracion FROM cursos c JOIN carreras ca ON c.carrera_id = ca.id WHERE c.id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();

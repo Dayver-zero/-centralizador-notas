@@ -536,6 +536,18 @@ tr:hover td {
     color: #0c5460;
 }
 
+.badge-abierto {
+    background: #28a745;
+}
+
+.badge-enviado {
+    background: #007acc;
+}
+
+.badge-cerrado {
+    background: #6c757d;
+}
+
 /* ============================================
    MODO OSCURO
    ============================================ */

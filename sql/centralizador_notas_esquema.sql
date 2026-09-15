@@ -38,11 +38,34 @@ DROP TABLE IF EXISTS `carreras`;
 CREATE TABLE `carreras` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(150) NOT NULL,
-  `duracion` varchar(50) DEFAULT '4 anos',
+  `duracion` int(11) NOT NULL DEFAULT 3,
+  `tipo` enum('anual','semestral') NOT NULL DEFAULT 'anual',
   `estado` enum('activa','inactiva') DEFAULT 'activa',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ------------------------------------------------------------
+-- Estructura de tabla: parcial_periodo
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `parcial_periodo`;
+
+CREATE TABLE `parcial_periodo` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `curso_id` int(11) NOT NULL,
+  `gestion` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `parcial` varchar(30) NOT NULL,
+  `estado` enum('abierto','enviado','cerrado') NOT NULL DEFAULT 'abierto',
+  `abierto_por` int(11) DEFAULT NULL,
+  `enviado_por` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_curso_mat_parcial` (`curso_id`,`materia_id`,`gestion`,`parcial`),
+  KEY `materia_id` (`materia_id`),
+  CONSTRAINT `parcial_periodo_ibfk_1` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `parcial_periodo_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ------------------------------------------------------------
 -- Estructura de tabla: cursos

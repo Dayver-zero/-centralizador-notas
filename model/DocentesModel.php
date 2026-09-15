@@ -94,10 +94,12 @@ class DocentesModel {
     }
 
     public function getMaterias($docenteId) {
-        $sql = "SELECT m.nombre AS materia, m.codigo, c.nombre AS curso, c.anio, c.paralelo, c.gestion, c.semestre, c.id AS curso_id, m.id AS materia_id
+        $sql = "SELECT m.nombre AS materia, m.codigo, c.nombre AS curso, c.anio, c.paralelo, c.gestion, c.semestre, c.id AS curso_id, m.id AS materia_id,
+                       ca.nombre AS carrera_nombre, ca.tipo AS carrera_tipo, ca.duracion AS carrera_duracion
                 FROM docente_materia_curso dmc
                 JOIN materias m ON dmc.materia_id = m.id
                 JOIN cursos c ON dmc.curso_id = c.id
+                JOIN carreras ca ON ca.id = c.carrera_id
                 WHERE dmc.docente_id = ?
                 ORDER BY c.anio, c.paralelo, m.nombre";
         $stmt = $this->conn->prepare($sql);

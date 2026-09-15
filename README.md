@@ -12,7 +12,11 @@ Sistema web de gestión académica para el registro pedagógico y administració
 - **Roles**: admin, docente y estudiante, con paneles y menús propios.
 - **Mensajería interna** (bandeja de entrada / enviar mensaje) entre usuarios.
 - Edición en línea de la tarjeta del registro (carrera, asignatura, docente, logo, etc.) con botón *Aplicar cambios*.
-- Añadir/quitar **columnas de evaluación** y **fechas de asistencia** sobre la hoja.
+- **Edición directa por celdas**: clic en cualquier celda (nota o asistencia) para corregir su valor sobre la hoja, sin modales.
+- **Navegación tipo Excel**: flechas (↑↓←→), Enter, Tab / Shift+Tab y Escape entre casillas, guardando en vivo sin recargar.
+- Añadir/quitar **columnas de evaluación** y **fechas de asistencia** sobre la hoja (al añadir columnas de nota se pide el nombre del trabajo; al añadir asistencia, su fecha).
+- **Cabeceras con fecha completa** de asistencia (dd/mm/aaaa) y **nombres de trabajos** (EVALUACION, PRACTICA, SER…) en lugar de números; el encabezado se renombra con un clic.
+- **Totales TEORIA, PRACTICA y PARCIAL** replicando las fórmulas del registro Excel: `REDONDEAR(SUMA(CONOCER);0)`, `REDONDEAR(SUMA(HACER)+SUMA(SER);0)` y `REDONDEAR(TEORIA+PRACTICA;0)`; con nota de parcial directa se aplica 30/70.
 - Añadir alumnos y desinscribir estudiantes sin notas ni asistencia (botones *Añadir alumno* / *Quitar vacíos*).
 - Modo oscuro para la interfaz; la hoja del registro se imprime siempre como papel.
 

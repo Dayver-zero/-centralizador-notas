@@ -15,11 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_validar();
     $accion = $_POST['accion'] ?? '';
     if ($accion === 'crear') {
-        $model->crear($_POST['nombre'], $_POST['duracion']);
+        $model->crear($_POST['nombre'], (int) ($_POST['duracion'] ?? 3), $_POST['tipo'] ?? 'anual');
         header("Location: /centralizador_notas/view/admin/gestion_carreras.php?msg=created");
         exit;
     } elseif ($accion === 'editar') {
-        $model->actualizar($_POST['id'], $_POST['nombre'], $_POST['duracion'], $_POST['estado']);
+        $model->actualizar($_POST['id'], $_POST['nombre'], (int) ($_POST['duracion'] ?? 3), $_POST['tipo'] ?? 'anual', $_POST['estado']);
         header("Location: /centralizador_notas/view/admin/gestion_carreras.php?msg=updated");
         exit;
     } elseif ($accion === 'eliminar') {
@@ -78,8 +78,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" name="nombre" required>
                 </div>
                 <div class="form-group">
-                    <label>Duracion</label>
-                    <input type="text" name="duracion" value="4 anos" required>
+                    <label>Duracion (años)</label>
+                    <input type="number" name="duracion" value="3" min="1" max="10" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select name="tipo" required>
+                        <option value="anual">Anual (4 parciales al año)</option>
+                        <option value="semestral">Semestral (2 parciales por semestre)</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-success">Crear Carrera</button>
             </form>
@@ -91,7 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
-                        <th>Duracion</th>
+                        <th>Duracion (años)</th>
+                        <th>Tipo</th>
+                        <th>Parciales</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -101,10 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <tr>
                         <td><?php echo $c['id']; ?></td>
                         <td><?php echo htmlspecialchars($c['nombre']); ?></td>
-                        <td><?php echo htmlspecialchars($c['duracion']); ?></td>
+                        <td><?php echo (int) $c['duracion']; ?></td>
+                        <td><?php echo $c['tipo'] === 'semestral' ? 'Semestral' : 'Anual'; ?></td>
+                        <td><?php echo $c['tipo'] === 'semestral' ? '2 por semestre' : '4 al año'; ?></td>
                         <td><?php echo htmlspecialchars($c['estado']); ?></td>
                         <td>
-                            <button class="btn btn-primary" onclick="editarCarrera(<?php echo (int) $c['id']; ?>, '<?php echo htmlspecialchars($c['nombre'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($c['duracion'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($c['estado'], ENT_QUOTES); ?>')">Editar</button>
+                            <button class="btn btn-primary" onclick="editarCarrera(<?php echo (int) $c['id']; ?>, '<?php echo htmlspecialchars($c['nombre'], ENT_QUOTES); ?>', <?php echo (int) $c['duracion']; ?>, '<?php echo htmlspecialchars($c['tipo'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($c['estado'], ENT_QUOTES); ?>')">Editar</button>
                             <form method="POST" style="display:inline;" onsubmit="return confirm('Eliminar esta carrera?')">
                                 <?php echo csrf_campo(); ?>
                                 <input type="hidden" name="accion" value="eliminar">
@@ -131,8 +142,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" name="nombre" id="editNombre" required>
                 </div>
                 <div class="form-group">
-                    <label>Duracion</label>
-                    <input type="text" name="duracion" id="editDuracion" required>
+                    <label>Duracion (años)</label>
+                    <input type="number" name="duracion" id="editDuracion" min="1" max="10" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select name="tipo" id="editTipo" required>
+                        <option value="anual">Anual (4 parciales al año)</option>
+                        <option value="semestral">Semestral (2 parciales por semestre)</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Estado</label>
@@ -150,10 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-    function editarCarrera(id, nombre, duracion, estado) {
+    function editarCarrera(id, nombre, duracion, tipo, estado) {
         document.getElementById('editId').value = id;
         document.getElementById('editNombre').value = nombre;
         document.getElementById('editDuracion').value = duracion;
+        document.getElementById('editTipo').value = tipo;
         document.getElementById('editEstado').value = estado;
         document.getElementById('modalEditar').classList.add('active');
     }

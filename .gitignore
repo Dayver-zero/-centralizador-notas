@@ -3,6 +3,7 @@ config/conexion.php
 
 # Plantillas / archivos locales grandes (Excel)
 *.xlsx
+*.rar
 
 # Basura de sistema operativo
 Thumbs.db

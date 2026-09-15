@@ -6,12 +6,64 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../model/CursosModel.php';
 require_once __DIR__ . '/../model/RegistroConfigModel.php';
 require_once __DIR__ . '/../model/EstudiantesModel.php';
+require_once __DIR__ . '/../model/ParcialPeriodoModel.php';
+require_once __DIR__ . '/../model/NotasModel.php';
+require_once __DIR__ . '/../model/AsistenciaModel.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-function jsonSalida($ok, $error = '') {
-    echo json_encode(['ok' => $ok, 'error' => $error]);
+function jsonSalida($ok, $error = '', $extra = []) {
+    $salida = ['ok' => $ok, 'error' => $error];
+    if (is_array($extra) && $extra) {
+        $salida += $extra;
+    }
+    echo json_encode($salida);
     exit;
+}
+
+function recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo) {
+    $notasModel = new NotasModel();
+    $parcialModel = new ParcialPeriodoModel();
+    $allNotas = $notasModel->getNotasEstudiante($estudianteId, $cursoId, $materiaId);
+
+    $conocerSum = 0; $hacerSum = 0; $serSum = 0;
+    $tieneConocer1 = false;
+    $tieneHacer1 = false;
+    foreach ($allNotas as $n) {
+        if (($n['tipo'] ?? '') === 'conocer') {
+            $conocerSum += (float) $n['nota'];
+            if (($n['nombre_actividad'] ?? '') === 'Conocer 1') $tieneConocer1 = true;
+        } elseif (($n['tipo'] ?? '') === 'hacer') {
+            $hacerSum += (float) $n['nota'];
+            if (($n['nombre_actividad'] ?? '') === 'Hacer 1') $tieneHacer1 = true;
+        } elseif (($n['tipo'] ?? '') === 'ser')    $serSum    += (float) $n['nota'];
+    }
+
+    $activo = $parcialModel->parcialActivo($cursoId, $materiaId, $gestion, $carreraTipo);
+    $label = $activo !== null ? $activo : 'Parcial';
+    $parcialDirecto = null;
+    foreach ($allNotas as $n) {
+        if (($n['tipo'] ?? '') === 'parcial' && ($n['nombre_actividad'] ?? '') === $label) {
+            $parcialDirecto = (float) $n['nota'];
+            break;
+        }
+    }
+
+    if ($parcialDirecto !== null) {
+        $teoria  = round($parcialDirecto * 0.30, 1);
+        $practica = round($parcialDirecto * 0.70, 1);
+        $parcial = $parcialDirecto;
+    } else {
+        $teoria   = $tieneConocer1 ? round($conocerSum, 0) : null;
+        $practica = $tieneHacer1   ? round($hacerSum + $serSum, 0) : null;
+        $parcial  = ($teoria !== null && $practica !== null) ? round($teoria + $practica, 0) : null;
+    }
+
+    return [
+        'teoria'  => $teoria !== null ? (float) $teoria : null,
+        'practica' => $practica !== null ? (float) $practica : null,
+        'parcial' => $parcial !== null ? (float) $parcial : null,
+    ];
 }
 
 if (($_SESSION['rol'] ?? '') !== 'docente') {
@@ -118,6 +170,89 @@ if ($accion === 'añadir_estudiante') {
     $estudianteId = (int) $nuevo['id'];
     $estudiantesModel->inscribirCurso($estudianteId, $cursoId, (int) ($curso['semestre'] ?? 1));
     jsonSalida(true);
+}
+
+if ($accion === 'enviar_parcial') {
+    $parcialModel = new ParcialPeriodoModel();
+    $parcial = $_POST['parcial'] ?? '';
+
+    if (!in_array($parcial, ParcialPeriodoModel::opciones($curso['carrera_tipo'] ?? 'anual'), true)) {
+        jsonSalida(false, 'Parcial no valido.');
+    }
+    if (!$parcialModel->esAbierto($cursoId, $materiaId, $gestion, $parcial)) {
+        jsonSalida(false, 'Este parcial no esta abierto o ya fue enviado.');
+    }
+    if ($parcialModel->enviar($cursoId, $materiaId, $gestion, $parcial, $docenteId)) {
+        jsonSalida(true);
+    }
+    jsonSalida(false, 'No se pudo enviar el parcial.');
+}
+
+if ($accion === 'guardar_nota') {
+    $tipo = $_POST['tipo'] ?? '';
+    if (!in_array($tipo, ['conocer', 'hacer', 'ser', 'parcial'], true)) {
+        jsonSalida(false, 'Tipo de nota no valido.');
+    }
+    $nombreActividad = trim($_POST['nombre_actividad'] ?? '');
+    if ($nombreActividad === '') {
+        jsonSalida(false, 'Falta el nombre de la actividad.');
+    }
+    $nota = isset($_POST['nota']) ? (float) $_POST['nota'] : -1;
+    if ($nota < 0 || $nota > 100) {
+        jsonSalida(false, 'La nota debe estar entre 0 y 100.');
+    }
+    $estudianteId = isset($_POST['estudiante_id']) ? (int) $_POST['estudiante_id'] : 0;
+    if (!$estudianteId) {
+        jsonSalida(false, 'Falta el estudiante.');
+    }
+    if ($tipo === 'parcial') {
+        if (!in_array($nombreActividad, ParcialPeriodoModel::opciones($curso['carrera_tipo'] ?? 'anual'), true)) {
+            jsonSalida(false, 'Parcial no valido.');
+        }
+        $parcialModel = new ParcialPeriodoModel();
+        if (!$parcialModel->esAbierto($cursoId, $materiaId, $gestion, $nombreActividad)) {
+            jsonSalida(false, 'Este parcial no esta abierto o ya fue enviado.');
+        }
+    }
+    $notasModel = new NotasModel();
+    if ($notasModel->guardarNota($estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion)) {
+        if ($tipo === 'parcial') {
+            $recalc = recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $curso['carrera_tipo'] ?? 'anual');
+            $recalc['celda'] = $recalc['parcial'] !== null ? number_format($recalc['parcial'], 1) : '';
+        } else {
+            $recalc = recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $curso['carrera_tipo'] ?? 'anual');
+            $recalc['celda'] = number_format($nota, 1);
+        }
+        jsonSalida(true, '', ['recalc' => $recalc]);
+    }
+    jsonSalida(false, 'No se pudo guardar la nota.');
+}
+
+if ($accion === 'guardar_asistencia') {
+    $estado = $_POST['estado'] ?? '';
+    if (!in_array($estado, ['Presente', 'Ausente', 'Justificado'], true)) {
+        jsonSalida(false, 'Estado de asistencia no valido.');
+    }
+    $fecha = trim($_POST['fecha'] ?? '');
+    if ($fecha === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+        jsonSalida(false, 'Fecha no valida.');
+    }
+    $estudianteId = isset($_POST['estudiante_id']) ? (int) $_POST['estudiante_id'] : 0;
+    if (!$estudianteId) {
+        jsonSalida(false, 'Falta el estudiante.');
+    }
+    $asistenciaModel = new AsistenciaModel();
+    if ($asistenciaModel->registrarAsistencia($estudianteId, $cursoId, $materiaId, $fecha, $estado, $gestion)) {
+        $resumen = $asistenciaModel->getResumenAsistencia($estudianteId, $cursoId, $materiaId, $gestion);
+        $recalc = [
+            'total'      => (int) $resumen['total'],
+            'porcentaje' => (float) $resumen['porcentaje'],
+            'letra'      => strtoupper(substr($estado, 0, 1)),
+            'estado'     => $estado,
+        ];
+        jsonSalida(true, '', ['recalc' => $recalc]);
+    }
+    jsonSalida(false, 'No se pudo guardar la asistencia.');
 }
 
 if ($accion === 'quitar_vacios') {

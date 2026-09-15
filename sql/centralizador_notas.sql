@@ -15,9 +15,28 @@ USE centralizador_notas;
 CREATE TABLE carreras (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(150) NOT NULL,
-    duracion VARCHAR(50) DEFAULT '4 anos',
+    duracion INT NOT NULL DEFAULT 3,
+    tipo ENUM('anual', 'semestral') NOT NULL DEFAULT 'anual',
     estado ENUM('activa', 'inactiva') DEFAULT 'activa',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================
+-- TABLA: parcial_periodo (temporadas por parcial)
+-- ============================================
+CREATE TABLE parcial_periodo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    curso_id INT NOT NULL,
+    gestion INT NOT NULL,
+    materia_id INT NOT NULL,
+    parcial VARCHAR(30) NOT NULL,
+    estado ENUM('abierto', 'enviado', 'cerrado') NOT NULL DEFAULT 'abierto',
+    abierto_por INT NULL,
+    enviado_por INT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_curso_mat_parcial (curso_id, materia_id, gestion, parcial),
+    FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
+    FOREIGN KEY (materia_id) REFERENCES materias(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ============================================
@@ -209,11 +228,11 @@ CREATE TABLE registro_config (
 -- ============================================
 
 -- Carreras
-INSERT INTO carreras (nombre, duracion) VALUES
-('Ingenieria en Sistemas Computacionales', '4 anos'),
-('Ingenieria en Administracion de Empresas', '4 anos'),
-('Contaduria Publica', '4 anos'),
-('Ingenieria Industrial', '4 anos');
+INSERT INTO carreras (nombre, duracion, tipo) VALUES
+('Ingenieria en Sistemas Computacionales', 3, 'anual'),
+('Ingenieria en Administracion de Empresas', 3, 'anual'),
+('Contaduria Publica', 3, 'anual'),
+('Ingenieria Industrial', 3, 'anual');
 
 -- Materias
 INSERT INTO materias (nombre, codigo, carrera_id) VALUES

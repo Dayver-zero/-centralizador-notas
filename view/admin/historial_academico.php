@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../model/CursosModel.php';
 require_once __DIR__ . '/../../model/MateriasModel.php';
 require_once __DIR__ . '/../../model/EstudiantesModel.php';
 require_once __DIR__ . '/../../model/NotasModel.php';
+require_once __DIR__ . '/../../model/ParcialPeriodoModel.php';
 
 $cursosModel     = new CursosModel();
 $materiasModel   = new MateriasModel();
@@ -22,11 +23,12 @@ $cursos      = $cursosModel->getAll();
 $estudiantes = $estudiantesModel->getAll();
 $gestion     = isset($_GET['gestion']) && $_GET['gestion'] !== '' ? (int) $_GET['gestion'] : (int) date('Y');
 
-function notaFinalParcial($primero, $segundo) {
-    if ($primero === null && $segundo === null) return null;
-    if ($primero === null) $primero = 0;
-    if ($segundo === null) $segundo = 0;
-    return round(($primero + $segundo) / 2, 1);
+function promedioArray(array $vals) {
+    $sum = 0; $n = 0;
+    foreach ($vals as $v) {
+        if ($v !== null) { $sum += $v; $n++; }
+    }
+    return $n > 0 ? round($sum / $n, 1) : null;
 }
 
 function fechaBoletin($ts) {
@@ -52,10 +54,14 @@ function fechaConclusion($anio) {
 
 // ===== MODO CURSO/MATERIA (Entrega de Calificaciones - formato RUBEN SISTEMAS.xlsx) =====
 $calendario = null; // tabla de entregas
+$carreraTipo = 'anual';
+$ciclo = ParcialPeriodoModel::ciclo('anual');
 if ($modo === 'curso') {
     $cursoSel    = $cursosModel->getById(isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0);
     $materiaSel  = null;
     $materiasCurso = $cursoSel ? $cursosModel->getMateriasPorCurso((int) $cursoSel['id']) : [];
+    $carreraTipo = $cursoSel ? ($cursoSel['carrera_tipo'] ?? 'anual') : 'anual';
+    $ciclo       = ParcialPeriodoModel::ciclo($carreraTipo);
 
     if ($cursoSel && isset($_GET['materia_id'])) {
         $materiaSel = null;
@@ -82,15 +88,23 @@ if ($modo === 'curso') {
                 $calendario[$id] = [
                     'nombre' => $f['nombre_completo'],
                     'matricula' => $f['matricula'],
-                    'primero' => null,
-                    'segundo' => null,
+                    'notas' => [],
+                    'parcialUnico' => null,
+                    'final' => null,
                 ];
             }
             $act = $f['nombre_actividad'];
-            if ($act === '1er Parcial' && $f['nota'] !== null) $calendario[$id]['primero'] = (float) $f['nota'];
-            elseif ($act === '2do Parcial' && $f['nota'] !== null) $calendario[$id]['segundo'] = (float) $f['nota'];
-            elseif ($act === 'Parcial' && $f['nota'] !== null && $calendario[$id]['primero'] === null) $calendario[$id]['primero'] = (float) $f['nota'];
+            if ($f['nota'] === null) continue;
+            if ($act === 'Parcial') {
+                $calendario[$id]['parcialUnico'] = (float) $f['nota'];
+            } elseif (in_array($act, $ciclo, true)) {
+                $calendario[$id]['notas'][$act] = (float) $f['nota'];
+            }
         }
+        foreach ($calendario as &$d) {
+            $d['final'] = !empty($d['notas']) ? promedioArray($d['notas']) : $d['parcialUnico'];
+        }
+        unset($d);
         ksort($calendario);
     }
 }
@@ -107,7 +121,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
         foreach ($notas as $n) {
             if (($n['tipo'] ?? '') !== 'parcial') continue;
             $act = $n['nombre_actividad'];
-            if (!in_array($act, ['1er Parcial', '2do Parcial', 'Parcial'], true)) continue;
+            if (!in_array($act, ['1er Parcial', '2do Parcial', '3er Parcial', '4to Parcial', 'Parcial'], true)) continue;
             $clave = (int) $n['materia_id'] . '|' . (int) $n['gestion'] . '|' . (int) $n['curso_id'];
             if (!isset($grupos[$clave])) {
                 $grupos[$clave] = [
@@ -116,18 +130,19 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                     'codigo' => $n['codigo'],
                     'materia' => $n['materia'],
                     'curso' => $n['curso'],
-                    'primero' => null,
-                    'segundo' => null,
+                    'notas' => [],
                     'nota' => null,
                 ];
             }
-            if ($act === '1er Parcial') $grupos[$clave]['primero'] = (float) $n['nota'];
-            elseif ($act === '2do Parcial') $grupos[$clave]['segundo'] = (float) $n['nota'];
-            else $grupos[$clave]['nota'] = (float) $n['nota'];
+            if ($act === 'Parcial') {
+                $grupos[$clave]['nota'] = (float) $n['nota'];
+            } else {
+                $grupos[$clave]['notas'][$act] = (float) $n['nota'];
+            }
         }
         foreach ($grupos as $g) {
-            if ($g['nota'] === null) {
-                $g['nota'] = notaFinalParcial($g['primero'], $g['segundo']);
+            if ($g['nota'] === null && !empty($g['notas'])) {
+                $g['nota'] = promedioArray($g['notas']);
             }
             $kardex['filas'][] = $g;
         }
@@ -263,8 +278,9 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                             <tr>
                                 <th class="th-nro">N°</th>
                                 <th class="th-nombre">APELLIDOS Y NOMBRES</th>
-                                <th>1er PARCIAL</th>
-                                <th>2do PARCIAL</th>
+                                <?php foreach ($ciclo as $pc): ?>
+                                <th><?php echo htmlspecialchars($pc === '4to Parcial' ? '4TO PARCIAL' : strtoupper($pc)); ?></th>
+                                <?php endforeach; ?>
                                 <th>PROMEDIO</th>
                                 <th>INSTANCIA</th>
                                 <th>NOTA FINAL</th>
@@ -273,19 +289,20 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                         </thead>
                         <tbody>
                             <?php if (empty($calendario)): ?>
-                                <tr><td colspan="8" class="sin-datos">No hay notas registradas para este curso/materia.</td></tr>
+                                <tr><td colspan="<?php echo count($ciclo) + 5; ?>" class="sin-datos">No hay notas registradas para este curso/materia.</td></tr>
                             <?php else: ?>
                                 <?php $n = 1; foreach ($calendario as $d): ?>
                                 <?php
-                                    $promedio = notaFinalParcial($d['primero'], $d['segundo']);
+                                    $promedio = $d['final'];
                                     $notaFin  = $promedio !== null ? round($promedio, 0) : null;
                                     $obs      = $notaFin !== null ? ($notaFin >= 61 ? 'APROBADO' : 'REPROBADO') : '';
                                 ?>
                                 <tr>
                                     <td><?php echo $n++; ?></td>
                                     <td class="td-nombre"><?php echo htmlspecialchars($d['nombre']); ?></td>
-                                    <td><?php echo $d['primero'] !== null ? number_format($d['primero'], 1) : ''; ?></td>
-                                    <td><?php echo $d['segundo'] !== null ? number_format($d['segundo'], 1) : ''; ?></td>
+                                    <?php foreach ($ciclo as $pc): ?>
+                                    <td><?php echo isset($d['notas'][$pc]) ? number_format($d['notas'][$pc], 1) : ''; ?></td>
+                                    <?php endforeach; ?>
                                     <td><?php echo $promedio !== null ? number_format($promedio, 1) : ''; ?></td>
                                     <td>REGULAR</td>
                                     <td><?php echo $notaFin !== null ? (int) $notaFin : ''; ?></td>

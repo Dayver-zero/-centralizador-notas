@@ -53,6 +53,7 @@
     <div class="submenu">
         <a href="/centralizador_notas/view/admin/gestion_cursos.php">Gestionar Cursos</a>
         <a href="/centralizador_notas/view/admin/asignaciones.php">Asignar Docentes</a>
+        <a href="/centralizador_notas/view/admin/gestion_periodos.php">Gestionar Parciales</a>
     </div>
 
     <div class="menu-item" onclick="toggleSubmenu(this)">

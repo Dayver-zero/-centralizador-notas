@@ -12,11 +12,13 @@ require_once __DIR__ . '/../../model/CursosModel.php';
 require_once __DIR__ . '/../../model/NotasModel.php';
 require_once __DIR__ . '/../../model/AsistenciaModel.php';
 require_once __DIR__ . '/../../model/RegistroConfigModel.php';
+require_once __DIR__ . '/../../model/ParcialPeriodoModel.php';
 
 $estudiantesModel = new EstudiantesModel();
 $cursosModel      = new CursosModel();
 $notasModel       = new NotasModel();
 $asistenciaModel  = new AsistenciaModel();
+$parcialModel     = new ParcialPeriodoModel();
 
 $cursoId   = isset($_GET['curso_id'])   ? (int) $_GET['curso_id']   : 0;
 $materiaId = isset($_GET['materia_id']) ? (int) $_GET['materia_id'] : 0;
@@ -30,6 +32,15 @@ if (!$cursoId || !$materiaId || !$cursosModel->esDocenteAsignado($docenteId, $ma
 $curso      = $cursosModel->getById($cursoId);
 $estudiantes = $estudiantesModel->getByCurso($cursoId);
 $gestion    = (int) ($curso['gestion'] ?? date('Y'));
+
+$carreraTipo    = $curso['carrera_tipo'] ?? 'anual';
+$opcionesParcial = ParcialPeriodoModel::opciones($carreraTipo);
+$estadosParcial  = $parcialModel->getEstados($cursoId, $materiaId, $gestion, $carreraTipo);
+$parcialActivo   = $parcialModel->parcialActivo($cursoId, $materiaId, $gestion, $carreraTipo, $estadosParcial);
+$etiquetaActivo  = $parcialActivo !== null ? ParcialPeriodoModel::etiqueta($parcialActivo) : '';
+$periodoDefault  = $carreraTipo === 'semestral'
+    ? semestreTexto($curso['semestre'] ?? 1)
+    : ParcialPeriodoModel::añoTexto($curso['anio'] ?? 1);
 
 // Configuracion editable de la hoja (registro_config)
 $regConfigModel = new RegistroConfigModel();
@@ -58,9 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /centralizador_notas/view/docente/registro_pedagogico.php?curso_id=$cursoId&materia_id=$materiaId&msg=asistencia");
         exit;
     } elseif ($accion === 'nota') {
+        $actividad = $_POST['nombre_actividad'] ?? '';
+        if (($_POST['tipo'] ?? '') === 'parcial') {
+            if (!in_array($actividad, $opcionesParcial, true) || !$parcialModel->esAbierto($cursoId, $materiaId, $gestion, $actividad)) {
+                header("Location: /centralizador_notas/view/docente/registro_pedagogico.php?curso_id=$cursoId&materia_id=$materiaId&msg=parcial_cerrado");
+                exit;
+            }
+        }
         $notasModel->guardarNota(
             (int) $_POST['estudiante_id'], $cursoId, $materiaId,
-            $_POST['tipo'], $_POST['nombre_actividad'],
+            $_POST['tipo'], $actividad,
             (float) $_POST['nota'], $gestion
         );
         header("Location: /centralizador_notas/view/docente/registro_pedagogico.php?curso_id=$cursoId&materia_id=$materiaId&msg=nota");
@@ -103,13 +121,18 @@ function getNota($notas, $tipo, $nombreActividad) {
     return null;
 }
 
-function notaCelda($notas, $tipo, $nombre, $fallback) {
+function fmtNota($v) {
+    if ($v === null || $v === '') return '';
+    return rtrim(rtrim(number_format((float) $v, 1, '.', ''), '0'), '.');
+}
+
+function notaCelda($notas, $tipo, $nombre) {
     foreach ($notas as $n) {
         if (($n['tipo'] ?? '') === $tipo && ($n['nombre_actividad'] ?? '') === $nombre) {
-            return number_format((float) $n['nota'], 1);
+            return fmtNota($n['nota']);
         }
     }
-    return $fallback > 0 ? number_format($fallback, 1) : '';
+    return '';
 }
 
 function semestreTexto($n) {
@@ -118,10 +141,10 @@ function semestreTexto($n) {
     return $map[(int) $n] ?? 'PRIMER SEMESTRE';
 }
 
-function filaVacia() {
+function filaVacia($nro = '') {
 ?>
-    <tr class="fila-vacia">
-        <td></td>
+    <tr class="fila-vacia" data-nro="<?php echo $nro; ?>">
+        <td class="reg-nro"><?php echo $nro; ?></td>
         <td colspan="2"></td>
         <td></td>
         <td></td><td></td>
@@ -142,7 +165,7 @@ function filaVacia() {
     <link rel="stylesheet" href="/centralizador_notas/css/estilos_pedagogico.css">
     <script defer src="/centralizador_notas/js/script_menu.js"></script>
     <script defer src="/centralizador_notas/js/script_registro.js"></script>
-    <script>window.APP_CSRF = '<?php echo csrf_token(); ?>';</script>
+    <script>window.APP_CSRF = '<?php echo csrf_token(); ?>'; window.APP_ACTIVO = '<?php echo htmlspecialchars(addslashes($parcialActivo ?? ''), ENT_QUOTES); ?>';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
 </head>
 <body>
@@ -163,13 +186,20 @@ function filaVacia() {
     <div class="reg-container">
         <?php if (isset($_GET['msg'])): ?>
             <div class="alert alert-success" style="max-width:600px; margin:0 auto 15px;">
-                <?php echo $_GET['msg'] === 'asistencia' ? 'Asistencia registrada.' : 'Nota guardada.'; ?>
+                <?php
+                $msg = $_GET['msg'];
+                if ($msg === 'asistencia') echo 'Asistencia registrada.';
+                elseif ($msg === 'parcial_cerrado') echo '<div class="alert alert-error" style="display:inline-block;">Este parcial esta cerrado o no esta habilitado.</div>';
+                else echo 'Nota guardada.';
+                ?>
             </div>
         <?php endif; ?>
 
         <div class="reg-btns">
-            <button class="btn btn-primary" onclick="abrirModal('modalAsistencia')"><i class="fas fa-calendar-check"></i> Registrar Asistencia</button>
-            <button class="btn btn-success" onclick="abrirModal('modalParcial')"><i class="fas fa-star"></i> Registrar Parcial</button>
+            <span id="reg-parcial-badge" style="display:inline-block; padding:4px 10px; border-radius:4px; font-size:12px; color:#fff; vertical-align:middle; margin-left:4px; background:<?php echo $parcialActivo !== null ? '#28a745' : '#6c757d'; ?>;">
+                <?php echo $parcialActivo !== null ? htmlspecialchars($etiquetaActivo) . ' — ABIERTO' : 'Sin parcial abierto'; ?>
+            </span>
+            <button class="btn btn-primary" type="button" id="reg-enviar-btn" onclick="regParciales.enviar()"<?php echo $parcialActivo === null ? ' disabled' : ''; ?>><i class="fas fa-paper-plane"></i> Enviar parcial</button>
             <span class="reg-col-ctrl">
                 <select id="col-bloque" title="Bloque para añadir/quitar columna">
                     <option value="conocer">CONOCER</option>
@@ -180,8 +210,6 @@ function filaVacia() {
                 <button class="btn btn-primary" type="button" onclick="regColumnas.add()"><i class="fas fa-plus"></i> Añadir columna</button>
                 <button class="btn btn-secondary" type="button" onclick="regColumnas.remove()"><i class="fas fa-minus"></i> Quitar</button>
             </span>
-            <button class="btn btn-primary" type="button" onclick="abrirModal('modalEstudiante')"><i class="fas fa-user-plus"></i> Añadir alumno</button>
-            <button class="btn btn-danger" type="button" onclick="regEstudiantes.quitarVacios()"><i class="fas fa-user-minus"></i> Quitar vacíos</button>
             <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
             <button class="btn btn-success" type="button" onclick="regConfig.aplicar()"><i class="fas fa-save"></i> Aplicar cambios</button>
             <button class="btn btn-secondary" type="button" onclick="regConfig.descartar()"><i class="fas fa-undo"></i> Descartar</button>
@@ -225,7 +253,7 @@ function filaVacia() {
                         title="Clic para editar"><?php echo htmlspecialchars($regAnio !== '' ? $regAnio : (string) $gestion); ?></td>
                     <td class="reg-card-lab">PERIODO:</td>
                     <td class="reg-card-val editable" data-campo="periodo"
-                        title="Clic para editar"><?php echo htmlspecialchars($regPeriodo !== '' ? $regPeriodo : semestreTexto($curso['semestre'] ?? 1)); ?></td>
+                        title="Clic para editar"><?php echo htmlspecialchars($regPeriodo !== '' ? $regPeriodo : $periodoDefault); ?></td>
                 </tr>
                 <tr>
                     <td class="reg-card-lab">DOCENTE:</td>
@@ -252,7 +280,7 @@ function filaVacia() {
                             <th colspan="2" class="reg-practica-tit">PRÁCTICA (70%)</th>
                             <th rowspan="3" class="reg-suma-tit">TEORIA</th>
                             <th rowspan="3" class="reg-suma-tit">PRACTICA</th>
-                            <th rowspan="3" class="reg-suma-tit">PRIMER PARCIAL</th>
+                            <th rowspan="3" class="reg-suma-tit"><?php echo htmlspecialchars($etiquetaActivo !== '' ? $etiquetaActivo : 'PARCIAL'); ?></th>
                         </tr>
                         <tr class="reg-h2">
                             <th colspan="1" class="reg-cuarto">CUARTO PARCIAL</th>
@@ -263,25 +291,22 @@ function filaVacia() {
                         <tr class="reg-h3">
                             <th rowspan="2" class="reg-fecha"
                                     title="<?php echo $fechasAsistencia[0] ? htmlspecialchars($fechasAsistencia[0]) : 'F1'; ?>"
-                                    colspan="1"><?php echo $fechasAsistencia[0] ? date('d/m', strtotime($fechasAsistencia[0])) : 'F1'; ?></th>
+                                    colspan="1"><?php echo $fechasAsistencia[0] ? date('d/m/Y', strtotime($fechasAsistencia[0])) : 'F1'; ?></th>
                             <th colspan="1" class="reg-eval">(30 PTOS) EVALUACION TEORICA</th>
                             <th colspan="1" class="reg-proy">(60 PTOS) ENTREGA DE PROYECTO FINAL</th>
-                            <th class="reg-ser-vert">SER</th>
+                            <th class="reg-ser-vert" data-nombre="SER" title="Clic para editar el nombre">SER</th>
                         </tr>
                         <tr class="reg-h4">
-                            <th class="reg-num reg-num-conocer">1</th>
-                            <th class="reg-num reg-num-hacer">1</th>
-                            <th class="reg-num reg-num-ser">1</th>
+                            <th class="reg-num reg-num-conocer" data-nombre="EVALUACION" title="Clic para editar el nombre">EVALUACION</th>
+                            <th class="reg-num reg-num-hacer" data-nombre="PRACTICA" title="Clic para editar el nombre">PRACTICA</th>
+                            <th class="reg-num reg-num-ser" data-nombre="SER" title="Clic para editar el nombre">SER</th>
                             <th class="reg-suma-val">30</th>
                             <th class="reg-suma-val">70</th>
                             <th class="reg-suma-val">100</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($estudiantes)): ?>
-                            <tr><td colspan="34" class="reg-empty">No hay estudiantes inscritos en este curso.</td></tr>
-                        <?php else: ?>
-                            <?php $nro = 1;
+                        <?php $nro = 1;
                             foreach ($estudiantes as $est):
                                 $estId = (int) $est['id'];
                                 $allNotas = $notasModel->getNotasEstudiante($estId, $cursoId, $materiaId);
@@ -291,20 +316,26 @@ function filaVacia() {
                                 foreach ($fechasEst as $fe) { $fechasMap[$fe['fecha']] = $fe['estado']; }
 
                                 $conocerSum = 0; $hacerSum = 0; $serSum = 0;
+                                $tieneConocer1 = false;
+                                $tieneHacer1 = false;
                                 foreach ($allNotas as $n) {
-                                    if (($n['tipo'] ?? '') === 'conocer') $conocerSum += (float) $n['nota'];
-                                    elseif (($n['tipo'] ?? '') === 'hacer') $hacerSum += (float) $n['nota'];
-                                    elseif (($n['tipo'] ?? '') === 'ser')    $serSum    += (float) $n['nota'];
+                                    if (($n['tipo'] ?? '') === 'conocer') {
+                                        $conocerSum += (float) $n['nota'];
+                                        if (($n['nombre_actividad'] ?? '') === 'Conocer 1') $tieneConocer1 = true;
+                                    } elseif (($n['tipo'] ?? '') === 'hacer') {
+                                        $hacerSum += (float) $n['nota'];
+                                        if (($n['nombre_actividad'] ?? '') === 'Hacer 1') $tieneHacer1 = true;
+                                    } elseif (($n['tipo'] ?? '') === 'ser')    $serSum    += (float) $n['nota'];
                                 }
-                                $parcialDirecto = getNota($allNotas, 'parcial', 'Parcial');
+                                $parcialDirecto = getNota($allNotas, 'parcial', $parcialActivo !== null ? $parcialActivo : 'Parcial');
                                 if ($parcialDirecto !== null) {
                                     $teoria  = round($parcialDirecto * 0.30, 1);
                                     $practica = round($parcialDirecto * 0.70, 1);
                                     $parcial = $parcialDirecto;
                                 } else {
-                                    $teoria  = $conocerSum > 0 ? round($conocerSum, 1) : null;
-                                    $practica = $hacerSum > 0 ? round($hacerSum * 0.7 + $serSum * 0.1, 1) : null;
-                                    $parcial = ($teoria !== null && $practica !== null) ? round($teoria + $practica, 1) : null;
+                                    $teoria  = $tieneConocer1 ? round($conocerSum, 0) : null;
+                                    $practica = $tieneHacer1 ? round($hacerSum + $serSum, 0) : null;
+                                    $parcial = ($teoria !== null && $practica !== null) ? round($teoria + $practica, 0) : null;
                                 }
                             ?>
                             <tr data-estudiante="<?php echo $estId; ?>">
@@ -313,36 +344,55 @@ function filaVacia() {
                                 <?php $fecha = $fechasAsistencia[0];
                                     $estado = $fecha ? ($fechasMap[$fecha] ?? '') : ''; ?>
                                     <td class="reg-asist-cel <?php echo $estado ? 'asist-' . strtolower($estado) : ''; ?>"
+                                        tabindex="0"
+                                        data-tipo="asistencia"
+                                        data-fecha="<?php echo htmlspecialchars($fecha); ?>"
+                                        data-est="<?php echo (int) $estId; ?>"
                                         title="<?php echo $fecha ? htmlspecialchars($fecha) : ''; ?>"
-                                        onclick="abrirModalAsistencia(<?php echo $estId; ?>, '<?php echo htmlspecialchars($fecha); ?>')">
+                                        onclick="regCelda.onClick(this)">
                                         <?php echo $estado ? strtoupper(substr($estado, 0, 1)) : ''; ?>
                                     </td>
                                 <td class="reg-asist"><?php echo (int) $asistencia['total']; ?></td>
                                 <td class="reg-pct"><?php echo $asistencia['porcentaje']; ?>%</td>
                                 <td class="reg-conocer-cel"
-                                    onclick="abrirModalNota(<?php echo $estId; ?>, 'conocer', 'Conocer 1')">
-                                    <?php echo notaCelda($allNotas, 'conocer', 'Conocer 1', $conocerSum); ?>
+                                    tabindex="0"
+                                    data-tipo="conocer"
+                                    data-actividad="Conocer 1"
+                                    data-est="<?php echo (int) $estId; ?>"
+                                    onclick="regCelda.onClick(this)">
+                                    <?php echo notaCelda($allNotas, 'conocer', 'Conocer 1'); ?>
                                 </td>
                                 <td class="reg-hacer-cel"
-                                    onclick="abrirModalNota(<?php echo $estId; ?>, 'hacer', 'Hacer 1')">
-                                    <?php echo notaCelda($allNotas, 'hacer', 'Hacer 1', $hacerSum); ?>
+                                    tabindex="0"
+                                    data-tipo="hacer"
+                                    data-actividad="Hacer 1"
+                                    data-est="<?php echo (int) $estId; ?>"
+                                    onclick="regCelda.onClick(this)">
+                                    <?php echo notaCelda($allNotas, 'hacer', 'Hacer 1'); ?>
                                 </td>
                                 <td class="reg-ser-cel"
-                                    onclick="abrirModalNota(<?php echo $estId; ?>, 'ser', 'Ser 1')">
-                                    <?php echo notaCelda($allNotas, 'ser', 'Ser 1', $serSum); ?>
+                                    tabindex="0"
+                                    data-tipo="ser"
+                                    data-actividad="Ser 1"
+                                    data-est="<?php echo (int) $estId; ?>"
+                                    onclick="regCelda.onClick(this)">
+                                    <?php echo notaCelda($allNotas, 'ser', 'Ser 1'); ?>
                                 </td>
-                                <td class="reg-suma-val"><?php echo $teoria !== null ? number_format($teoria, 1) : ''; ?></td>
-                                <td class="reg-suma-val"><?php echo $practica !== null ? number_format($practica, 1) : ''; ?></td>
+                                <td class="reg-suma-val"><?php echo fmtNota($teoria); ?></td>
+                                <td class="reg-suma-val"><?php echo fmtNota($practica); ?></td>
                                 <td class="reg-suma-val reg-parcial"
-                                    onclick="abrirModalParcial(<?php echo $estId; ?>)">
-                                    <?php echo $parcial !== null ? number_format($parcial, 1) : ''; ?>
+                                    tabindex="0"
+                                    data-tipo="parcial"
+                                    data-actividad="<?php echo htmlspecialchars($parcialActivo ?? ''); ?>"
+                                    data-est="<?php echo (int) $estId; ?>"
+                                    onclick="regCelda.onClick(this)"<?php echo $parcialActivo === null ? ' title="No hay parcial abierto"' : ''; ?>>
+                                    <?php echo fmtNota($parcial); ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
                             <?php for ($i = count($estudiantes); $i < 20; $i++): ?>
-                                <?php filaVacia(); ?>
+                                <?php filaVacia($nro++); ?>
                             <?php endfor; ?>
-                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -391,166 +441,6 @@ function filaVacia() {
         <?php endif; ?>
     </div>
 
-    <!-- MODAL ASISTENCIA -->
-    <div id="modalAsistencia" class="modal-overlay">
-        <div class="modal">
-            <h3>Registrar Asistencia</h3>
-            <form method="POST">
-                <?php echo csrf_campo(); ?>
-                <input type="hidden" name="accion" value="asistencia">
-                <div class="form-group">
-                    <label>Estudiante</label>
-                    <select name="estudiante_id" id="modalAsistEstudiante" required>
-                        <?php foreach ($estudiantes as $est): ?>
-                        <option value="<?php echo (int) $est['id']; ?>"><?php echo htmlspecialchars($est['nombre_completo']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Fecha</label>
-                    <input type="date" name="fecha" id="modalAsistFecha" required>
-                </div>
-                <div class="form-group">
-                    <label>Estado</label>
-                    <select name="estado" required>
-                        <option value="Presente">Presente</option>
-                        <option value="Ausente">Ausente</option>
-                        <option value="Justificado">Justificado</option>
-                    </select>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-success">Guardar</button>
-                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalAsistencia')">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL PARCIAL -->
-    <div id="modalParcial" class="modal-overlay">
-        <div class="modal">
-            <h3>Registrar Nota Parcial</h3>
-            <form method="POST">
-                <?php echo csrf_campo(); ?>
-                <input type="hidden" name="accion" value="nota">
-                <input type="hidden" name="tipo" value="parcial">
-                <div class="form-group">
-                    <label>Estudiante</label>
-                    <select name="estudiante_id" id="modalParcEstudiante" required>
-                        <?php foreach ($estudiantes as $est): ?>
-                        <option value="<?php echo (int) $est['id']; ?>"><?php echo htmlspecialchars($est['nombre_completo']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Nombre Actividad</label>
-                    <select name="nombre_actividad" id="modalParcActividad" required>
-                        <option value="1er Parcial">1er Parcial</option>
-                        <option value="2do Parcial">2do Parcial</option>
-                        <option value="Parcial">Parcial Único</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Nota (0 - 100)</label>
-                    <input type="number" name="nota" id="modalParcNota" step="0.1" min="0" max="100" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-success">Guardar</button>
-                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalParcial')">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL NOTA (CONOCER/HACER/SER) -->
-    <div id="modalNota" class="modal-overlay">
-        <div class="modal">
-            <h3>Registrar Nota</h3>
-            <form method="POST">
-                <?php echo csrf_campo(); ?>
-                <input type="hidden" name="accion" value="nota">
-                <input type="hidden" name="tipo" id="modalNotaTipo">
-                <div class="form-group">
-                    <label>Estudiante</label>
-                    <select name="estudiante_id" id="modalNotaEstudiante" required>
-                        <?php foreach ($estudiantes as $est): ?>
-                        <option value="<?php echo (int) $est['id']; ?>"><?php echo htmlspecialchars($est['nombre_completo']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Nombre Actividad</label>
-                    <input type="text" name="nombre_actividad" id="modalNotaActividad" required>
-                </div>
-                <div class="form-group">
-                    <label>Nota</label>
-                    <input type="number" name="nota" id="modalNotaNota" step="0.1" min="0" max="100" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-success">Guardar</button>
-                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalNota')">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL AÑADIR ESTUDIANTE -->
-    <div id="modalEstudiante" class="modal-overlay">
-        <div class="modal">
-            <h3>Añadir Alumno</h3>
-            <form id="formEstudiante">
-                <?php echo csrf_campo(); ?>
-                <div class="form-group">
-                    <label>APELLIDOS Y NOMBRES</label>
-                    <input type="text" name="nombre" id="modalEstNombre" required
-                           placeholder="Ej. Quispe Mamani, Juan Carlos">
-                </div>
-                <div class="form-group">
-                    <label>C.I.</label>
-                    <input type="text" name="ci" id="modalEstCi" required placeholder="1234567">
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-success">Guardar</button>
-                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalEstudiante')">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-    function abrirModal(id) {
-        document.getElementById(id).classList.add('active');
-    }
-    function cerrarModal(id) {
-        document.getElementById(id).classList.remove('active');
-    }
-    function abrirModalAsistencia(estudianteId, fecha) {
-        document.getElementById('modalAsistEstudiante').value = estudianteId;
-        if (fecha) document.getElementById('modalAsistFecha').value = fecha;
-        abrirModal('modalAsistencia');
-    }
-    function abrirModalParcial(estudianteId) {
-        document.getElementById('modalParcEstudiante').value = estudianteId;
-        abrirModal('modalParcial');
-    }
-    function abrirModalNota(estudianteId, tipo, actividad) {
-        document.getElementById('modalNotaEstudiante').value = estudianteId;
-        document.getElementById('modalNotaTipo').value = tipo;
-        document.getElementById('modalNotaActividad').value = actividad;
-        document.getElementById('modalNotaNota').value = '';
-        abrirModal('modalNota');
-    }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            document.querySelectorAll('.modal-overlay.active').forEach(function(m) { m.classList.remove('active'); });
-        }
-    });
-    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.classList.remove('active');
-        });
-    });
-    </script>
     <script src="/centralizador_notas/js/fondo.js"></script>
 </body>
 </html>

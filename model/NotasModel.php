@@ -75,20 +75,12 @@ class NotasModel {
         if ($gestion === null || $gestion === '') {
             $gestion = (int) date('Y');
         }
-        $stmt = $this->conn->prepare("SELECT id FROM notas WHERE estudiante_id = ? AND curso_id = ? AND materia_id = ? AND tipo = ? AND nombre_actividad = ?");
-        $stmt->bind_param("iiiss", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad);
-        $stmt->execute();
-        $stmt->store_result();
-        $existe = $stmt->num_rows > 0;
-        $stmt->close();
-
-        if ($existe) {
-            $stmt = $this->conn->prepare("UPDATE notas SET nota = ?, gestion = ? WHERE estudiante_id = ? AND curso_id = ? AND materia_id = ? AND tipo = ? AND nombre_actividad = ?");
-            $stmt->bind_param("diiisss", $nota, $gestion, $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad);
-        } else {
-            $stmt = $this->conn->prepare("INSERT INTO notas (estudiante_id, curso_id, materia_id, tipo, nombre_actividad, nota, gestion) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iiissdi", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion);
-        }
+        $stmt = $this->conn->prepare(
+            "INSERT INTO notas (estudiante_id, curso_id, materia_id, tipo, nombre_actividad, nota, gestion)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE nota = VALUES(nota), gestion = VALUES(gestion)"
+        );
+        $stmt->bind_param("iiissdi", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion);
         $result = $stmt->execute();
         $stmt->close();
         return $result;

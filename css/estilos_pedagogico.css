@@ -233,7 +233,7 @@
 
 .reg-asistencia-tit { background: #b7e0c4; }
 .reg-cuarto        { background: #cfe9d9; }
-.reg-fecha         { background: #e2f2e8; font-weight: 700; min-width: 34px; }
+.reg-fecha         { background: #e2f2e8; font-weight: 700; min-width: 64px; white-space: normal; line-height: 1.05; }
 .reg-fecha-break   { background: #eef7f1; }
 .reg-teoria-tit    { background: #f2e3a7; }
 .reg-conocer-tit   { background: #f6e8bd; }
@@ -244,6 +244,15 @@
 .reg-proy          { background: #e3eefa; }
 .reg-ser-tit       { background: #dec9f2; }
 .reg-ser-vert      { background: #e6d7f8; min-width: 30px; line-height: 1.05; }
+.reg-num[data-nombre], .reg-ser-vert[data-nombre] { white-space: normal; cursor: pointer; text-align: center; }
+.reg-num[data-nombre]  { min-width: 70px; max-width: 96px; line-height: 1.05; }
+.reg-ser-vert[data-nombre] { min-width: 66px; }
+.reg-num[data-nombre]:hover, .reg-ser-vert[data-nombre]:hover { background: #f6e9bd; }
+.reg-num[data-nombre].servivo, .reg-ser-vert[data-nombre].servivo {
+    background: #fff;
+    outline: 1px dashed #0a6cd6;
+    cursor: text;
+}
 .reg-suma-tit      { background: #bfe0e6; }
 .reg-suma-val      { background: #dceff2; min-width: 42px; }
 
@@ -269,7 +278,7 @@
 
 .reg-tabla tbody tr:hover .reg-conocer-cel,
 .reg-tabla tbody tr:hover .reg-hacer-cel,
-.reg-tabla tbody tr:hover .reg-ser-cel { background: #f0f0f0; }
+.reg-tabla tbody tr:hover .reg-ser-cel { background: #d9e7f8; }
 
 .reg-parcial {
     cursor: pointer;
@@ -278,6 +287,43 @@
 }
 
 .reg-parcial:hover { background: #cfe0e6; }
+
+/* Celda activa (navegacion por teclado) */
+.reg-tabla td[data-tipo].celda-activa {
+    outline: 2px solid #0a6cd6;
+    outline-offset: -2px;
+}
+
+/* Edicion directa en celdas (input/select inline) */
+.reg-tabla td.editing-celda {
+    padding: 0;
+    min-width: 46px;
+}
+
+.reg-tabla td .celda-inline {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    padding: 1px 3px;
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    box-sizing: border-box;
+    border: 1px solid #0a6cd6;
+    border-radius: 2px;
+    background: #fff;
+    color: #333;
+}
+
+.reg-tabla td .celda-inline:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(10, 108, 214, 0.25);
+}
+
+.reg-asist-cel .celda-inline {
+    font-size: 10px;
+    font-weight: 700;
+}
 
 .fila-vacia td { background: #fff; }
 
@@ -450,7 +496,9 @@ body.dark-mode .reg-sheet .asist-justificado { color: #7a5300; }
     }
 
     .reg-asist-cel { min-width: 22px; }
-    .reg-fecha { min-width: 26px; }
+    .reg-fecha { min-width: 44px; }
+    .reg-num[data-nombre] { min-width: 44px; font-size: 6.5pt; }
+    .reg-ser-vert[data-nombre] { min-width: 44px; }
 
     .reg-ind-tit { font-size: 8pt; }
     .reg-ind-col ol { font-size: 7.5pt; }

@@ -27,17 +27,17 @@ class CarrerasModel {
         return $carrera;
     }
 
-    public function crear($nombre, $duracion) {
-        $stmt = $this->conn->prepare("INSERT INTO carreras (nombre, duracion) VALUES (?, ?)");
-        $stmt->bind_param("ss", $nombre, $duracion);
+    public function crear($nombre, $duracion, $tipo = 'anual') {
+        $stmt = $this->conn->prepare("INSERT INTO carreras (nombre, duracion, tipo) VALUES (?, ?, ?)");
+        $stmt->bind_param("sis", $nombre, $duracion, $tipo);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
     }
 
-    public function actualizar($id, $nombre, $duracion, $estado) {
-        $stmt = $this->conn->prepare("UPDATE carreras SET nombre = ?, duracion = ?, estado = ? WHERE id = ?");
-        $stmt->bind_param("sssi", $nombre, $duracion, $estado, $id);
+    public function actualizar($id, $nombre, $duracion, $tipo, $estado) {
+        $stmt = $this->conn->prepare("UPDATE carreras SET nombre = ?, duracion = ?, tipo = ?, estado = ? WHERE id = ?");
+        $stmt->bind_param("sissi", $nombre, $duracion, $tipo, $estado, $id);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
