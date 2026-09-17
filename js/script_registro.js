@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BASE = { conocer: 1, hacer: 1, ser: 1, asistencia: 1 };
+    var BASE = { conocer: 1, hacer: 1, ser: 2, asistencia: 1 };
     var MAX = 12;
     var MAX_FECHAS = 12;
 
@@ -122,6 +122,7 @@
         th.className = 'reg-num ' + cfg.numClass;
         th.textContent = text || num;
         th.setAttribute('data-nombre', th.textContent);
+        th.setAttribute('data-pts', limiteDesdeTexto(th.textContent, cfg));
         th.setAttribute('title', 'Clic para editar el nombre');
         h4.insertBefore(th, ref ? ref.nextSibling : null);
     }
@@ -253,9 +254,19 @@
     }
 
     // Pide el nombre del trabajo una vez al anadir una columna de nota
+    function bloquePtos(cfg) {
+        return cfg.tipo === 'conocer' ? 30 : cfg.tipo === 'hacer' ? 60 : 10;
+    }
+
+    function limiteDesdeTexto(texto, cfg) {
+        var m = (texto || '').match(/\((\d+(?:\.\d+)?)\s*(?:PTOS?|PTS?)\)/i);
+        return m ? m[1] : String(bloquePtos(cfg));
+    }
+
     function pedirNombreColumna(cfg, num) {
-        var sugerida = cfg.nombre + ' ' + num;
-        var valor = window.prompt('Nombre del trabajo para esta columna:\n(Se muestra en el encabezado; la nota se guarda como ' + cfg.actividadBase + ' ' + num + ')', sugerida);
+        var pts = bloquePtos(cfg);
+        var sugerida = '(' + pts + ' PTOS) ' + cfg.nombre + ' ' + num;
+        var valor = window.prompt('Nombre del trabajo para esta columna:\nIncluye el puntaje maximo entre parentesis, Ej: (30 PTOS) EVALUACION 2\n(Se muestra en el encabezado; la nota se guarda como ' + cfg.actividadBase + ' ' + num + ')', sugerida);
         if (valor === null) return null;
         valor = (valor || '').trim();
         return valor === '' ? sugerida : valor;
@@ -300,11 +311,18 @@
         // celda numerica en la pestaña superior, despues de la ultima del mismo bloque
         addHeaderTh(h4, cfg, now, '.' + cfg.numClass, nombre);
 
+        // para SER el nombre solo se muestra en la banda vertical (h3); la celda numerica (h4) conserva data-nombre/data-pts pero sin texto
+        if (block === 'ser') {
+            var serNums = h4.querySelectorAll('.' + cfg.numClass);
+            if (serNums.length) serNums[serNums.length - 1].textContent = '';
+        }
+
         dataRows().forEach(function (row) {
             addCellData(row, cfg, now);
         });
 
         syncFilaVacia();
+        if (window.regLimites) window.regLimites.reMarcar();
     }
 
     function remove() {
@@ -340,6 +358,7 @@
         });
 
         syncFilaVacia();
+        if (window.regLimites) window.regLimites.reMarcar();
     }
 
     /* ---------------------------------------------------------- */
@@ -394,7 +413,26 @@
         el.setAttribute('data-nombre', nombre);
         el.removeAttribute('contenteditable');
         el.classList.remove('servivo');
-        if (el.classList.contains('reg-num-ser')) sincronizarSerVert(indiceNumSer(el), nombre);
+        if (el.classList.contains('reg-num-ser')) {
+            sincronizarSerVert(indiceNumSer(el), nombre);
+            el.setAttribute('data-pts', limiteDesdeTexto(nombre, BLOCKS.ser));
+        } else if (el.classList.contains('reg-ser-vert')) {
+            var vts = document.querySelectorAll('.reg-h3 .reg-ser-vert');
+            var idx = -1;
+            for (var i2 = 0; i2 < vts.length; i2++) { if (vts[i2] === el) { idx = i2; break; } }
+            if (idx >= 0) {
+                var numSer = document.querySelectorAll('.reg-h4 .reg-num-ser')[idx];
+                if (numSer) {
+                    numSer.setAttribute('data-nombre', nombre);
+                    numSer.setAttribute('data-pts', limiteDesdeTexto(nombre, BLOCKS.ser));
+                }
+            }
+        } else if (el.classList.contains('reg-num-conocer')) {
+            el.setAttribute('data-pts', limiteDesdeTexto(nombre, BLOCKS.conocer));
+        } else if (el.classList.contains('reg-num-hacer')) {
+            el.setAttribute('data-pts', limiteDesdeTexto(nombre, BLOCKS.hacer));
+        }
+        if (window.regLimites) window.regLimites.reMarcar();
     }, true);
 
     document.addEventListener('keydown', function (e) {
@@ -564,6 +602,7 @@
             sumas[1].textContent = fmtNum(recalc.practica);
             sumas[2].textContent = fmtNum(recalc.parcial);
         }
+        marcarLimites(row);
     }
 
     function aplicarAsistencia(td, recalc) {
@@ -580,6 +619,68 @@
         }
     }
 
+    /* ---------------------------------------------------------- */
+    /*  Limites visuales por bloque (rojo al superar)              */
+    /* ---------------------------------------------------------- */
+
+    var LIMITES_BLOQUE = { conocer: 30, hacer: 60, ser: 10 };
+
+    function valorCelda(td) {
+        var v = parseFloat(tdTexto(td));
+        return isNaN(v) ? 0 : v;
+    }
+
+    function sumaBloque(row, tipo) {
+        var suma = 0;
+        row.querySelectorAll('td[data-tipo="' + tipo + '"]').forEach(function (td) {
+            suma += valorCelda(td);
+        });
+        return suma;
+    }
+
+    function thDeCelda(tipo, td) {
+        var cls = tipo === 'conocer' ? 'reg-num-conocer' : (tipo === 'hacer' ? 'reg-num-hacer' : 'reg-num-ser');
+        var celdas = rowOf(td) ? rowOf(td).querySelectorAll('td[data-tipo="' + tipo + '"]') : [];
+        var idx = -1;
+        for (var i = 0; i < celdas.length; i++) { if (celdas[i] === td) { idx = i; break; } }
+        var ths = document.querySelectorAll('.' + cls);
+        return (idx >= 0 && ths[idx]) ? ths[idx] : null;
+    }
+
+    function pintarTd(td, sobre, valor) {
+        if (td.querySelector('.celda-inline')) return;
+        td.classList.toggle('reg-limit', sobre && valor > 0);
+    }
+
+    function marcarLimites(row) {
+        if (!row || !row.querySelectorAll) return;
+        var tipos = Object.keys(LIMITES_BLOQUE);
+        for (var t = 0; t < tipos.length; t++) {
+            var tipo = tipos[t];
+            var suma = sumaBloque(row, tipo);
+            var sobreSuma = suma > LIMITES_BLOQUE[tipo];
+            row.querySelectorAll('td[data-tipo="' + tipo + '"]').forEach(function (td) {
+                var valor = valorCelda(td);
+                var sobre = sobreSuma;
+                var th = thDeCelda(tipo, td);
+                if (th) {
+                    var pts = parseFloat(th.getAttribute('data-pts'));
+                    if (pts > 0 && valor > pts) sobre = true;
+                }
+                pintarTd(td, sobre, valor);
+            });
+        }
+        var sumas = row.querySelectorAll('.reg-suma-val');
+        if (sumas.length >= 2) {
+            sumas[0].classList.toggle('reg-limit', sumaBloque(row, 'conocer') > LIMITES_BLOQUE.conocer);
+            sumas[1].classList.toggle('reg-limit', sumaBloque(row, 'hacer') > LIMITES_BLOQUE.hacer || sumaBloque(row, 'ser') > LIMITES_BLOQUE.ser);
+        }
+    }
+
+    function marcarTodasFilas() {
+        filas().forEach(marcarLimites);
+    }
+
     function guardarNota(td, tipo, actividad, est, valor, textoOrig, onDone) {
         post('guardar_nota',
             { estudiante_id: est, tipo: tipo, nombre_actividad: actividad, nota: valor },
@@ -591,6 +692,7 @@
             },
             function () {
                 restaurar(td, textoOrig);
+                marcarLimites(rowOf(td));
                 if (onDone) onDone(null);
             });
     }
@@ -800,6 +902,7 @@
     });
 
     window.regCelda = { onClick: onClick, enfocar: enfocar, mover: mover };
+    window.regLimites = { reMarcar: marcarTodasFilas };
 })();
 
 // ============================================================

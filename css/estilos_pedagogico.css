@@ -95,6 +95,7 @@
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 14px;
+    border-bottom: 2px solid #000;
 }
 
 .reg-card td {
@@ -256,6 +257,13 @@
 .reg-suma-tit      { background: #bfe0e6; }
 .reg-suma-val      { background: #dceff2; min-width: 42px; }
 
+.reg-tabla td.reg-limit,
+.reg-tabla th.reg-limit {
+    color: #c0392b;
+    background: #fdecea;
+    font-weight: 700;
+}
+
 .reg-asist-cel {
     cursor: pointer;
     font-weight: 700;
@@ -279,6 +287,8 @@
 .reg-tabla tbody tr:hover .reg-conocer-cel,
 .reg-tabla tbody tr:hover .reg-hacer-cel,
 .reg-tabla tbody tr:hover .reg-ser-cel { background: #d9e7f8; }
+
+.reg-tabla tbody tr:hover td.reg-limit { color: #c0392b; background: #fdecea; }
 
 .reg-parcial {
     cursor: pointer;
@@ -329,7 +339,7 @@
 
 /* Separador horizontal visible entre estudiantes */
 .reg-tabla tbody tr td {
-    border-bottom: 2.5px solid #000;
+    border-bottom: 1px solid #000;
 }
 
 .reg-empty {
@@ -485,8 +495,19 @@ body.dark-mode .reg-sheet .asist-justificado { color: #7a5300; }
         background: #fff !important;
     }
 
+    .reg-tabla td.reg-limit, .reg-tabla th.reg-limit {
+        color: #c0392b !important;
+        background: #fdecea !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .reg-card {
+        border-bottom: 2px solid #000;
+    }
+
     .reg-tabla tbody tr td {
-        border-bottom: 2.5px solid #000 !important;
+        border-bottom: 1px solid #000 !important;
     }
 
     .reg-tabla th {

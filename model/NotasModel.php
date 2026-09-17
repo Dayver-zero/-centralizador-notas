@@ -71,16 +71,36 @@ class NotasModel {
         return $notas;
     }
 
-    public function guardarNota($estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion = null) {
+    public function guardarNota($estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion = null, $origen = 'manual') {
         if ($gestion === null || $gestion === '') {
             $gestion = (int) date('Y');
         }
         $stmt = $this->conn->prepare(
-            "INSERT INTO notas (estudiante_id, curso_id, materia_id, tipo, nombre_actividad, nota, gestion)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE nota = VALUES(nota), gestion = VALUES(gestion)"
+            "INSERT INTO notas (estudiante_id, curso_id, materia_id, tipo, nombre_actividad, nota, gestion, origen)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE nota = VALUES(nota), gestion = VALUES(gestion),
+                 origen = IF(origen = 'manual', 'manual', VALUES(origen))"
         );
-        $stmt->bind_param("iiissdi", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion);
+        $stmt->bind_param("iiissdis", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad, $nota, $gestion, $origen);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+
+    public function getParcialFilaDe($notas, $nombreActividad) {
+        foreach ($notas as $n) {
+            if (($n['tipo'] ?? '') === 'parcial' && ($n['nombre_actividad'] ?? '') === $nombreActividad) {
+                return $n;
+            }
+        }
+        return null;
+    }
+
+    public function eliminarNota($estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad) {
+        $stmt = $this->conn->prepare(
+            "DELETE FROM notas WHERE estudiante_id = ? AND curso_id = ? AND materia_id = ? AND tipo = ? AND nombre_actividad = ?"
+        );
+        $stmt->bind_param("iiiss", $estudianteId, $cursoId, $materiaId, $tipo, $nombreActividad);
         $result = $stmt->execute();
         $stmt->close();
         return $result;

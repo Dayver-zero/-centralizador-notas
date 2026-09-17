@@ -21,9 +21,8 @@ function jsonSalida($ok, $error = '', $extra = []) {
     exit;
 }
 
-function recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo) {
+function recalcFilaPara($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo, $label) {
     $notasModel = new NotasModel();
-    $parcialModel = new ParcialPeriodoModel();
     $allNotas = $notasModel->getNotasEstudiante($estudianteId, $cursoId, $materiaId);
 
     $conocerSum = 0; $hacerSum = 0; $serSum = 0;
@@ -39,13 +38,15 @@ function recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo)
         } elseif (($n['tipo'] ?? '') === 'ser')    $serSum    += (float) $n['nota'];
     }
 
-    $activo = $parcialModel->parcialActivo($cursoId, $materiaId, $gestion, $carreraTipo);
-    $label = $activo !== null ? $activo : 'Parcial';
     $parcialDirecto = null;
     foreach ($allNotas as $n) {
         if (($n['tipo'] ?? '') === 'parcial' && ($n['nombre_actividad'] ?? '') === $label) {
-            $parcialDirecto = (float) $n['nota'];
-            break;
+            // Solo el parcial escrito a mano (origen=manual) se respeta como tal;
+            // el autogenerado (origen=auto) se recalcula desde los componentes.
+            if (($n['origen'] ?? 'manual') === 'manual') {
+                $parcialDirecto = (float) $n['nota'];
+                break;
+            }
         }
     }
 
@@ -66,7 +67,14 @@ function recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo)
     ];
 }
 
-if (($_SESSION['rol'] ?? '') !== 'docente') {
+function recalcFila($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo) {
+    $parcialModel = new ParcialPeriodoModel();
+    $activo = $parcialModel->parcialActivo($cursoId, $materiaId, $gestion, $carreraTipo);
+    $label = $activo !== null ? $activo : 'Parcial';
+    return recalcFilaPara($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo, $label);
+}
+
+if (!in_array($_SESSION['rol'] ?? '', ['docente', 'admin'], true)) {
     http_response_code(401);
     jsonSalida(false, 'Sesion no valida.');
 }
@@ -80,14 +88,14 @@ csrf_validar();
 
 $cursoId   = isset($_POST['curso_id'])   ? (int) $_POST['curso_id']   : 0;
 $materiaId = isset($_POST['materia_id']) ? (int) $_POST['materia_id'] : 0;
-$docenteId = (int) $_SESSION['referer_id'];
+$docenteId = (int) ($_SESSION['referer_id'] ?? 0);
 
 if (!$cursoId || !$materiaId) {
     jsonSalida(false, 'Faltan curso o materia.');
 }
 
 $cursosModel = new CursosModel();
-if (!$cursosModel->esDocenteAsignado($docenteId, $materiaId, $cursoId)) {
+if (($_SESSION['rol'] ?? '') !== 'admin' && !$cursosModel->esDocenteAsignado($docenteId, $materiaId, $cursoId)) {
     http_response_code(403);
     jsonSalida(false, 'No autorizado para este curso/materia.');
 }
@@ -182,6 +190,34 @@ if ($accion === 'enviar_parcial') {
     if (!$parcialModel->esAbierto($cursoId, $materiaId, $gestion, $parcial)) {
         jsonSalida(false, 'Este parcial no esta abierto o ya fue enviado.');
     }
+
+    // Genera desde el registro la nota parcial de cada estudiante para que el
+    // historial academico salga del registro pedagogico. Reglas:
+    //  - nota manual digitada en la planilla (origen=manual): se respeta siempre
+    //  - nota auto-generada (origen=auto): se recalcula con los componentes al reenviar
+    //  - sin datos suficientes queda en blanco (y la fila auto previa se retira)
+    $estudiantesModel = new EstudiantesModel();
+    $notasModel = new NotasModel();
+    $carreraTipo = $curso['carrera_tipo'] ?? 'anual';
+    foreach ($estudiantesModel->getByCurso($cursoId) as $est) {
+        $estudianteId = (int) $est['id'];
+        $notas = $notasModel->getNotasEstudiante($estudianteId, $cursoId, $materiaId);
+        $fila = $notasModel->getParcialFilaDe($notas, $parcial);
+
+        if ($fila !== null && ($fila['origen'] ?? 'manual') === 'manual') {
+            continue;
+        }
+
+        $recalc = recalcFilaPara($estudianteId, $cursoId, $materiaId, $gestion, $carreraTipo, $parcial);
+        if ($recalc['parcial'] === null) {
+            if ($fila !== null) {
+                $notasModel->eliminarNota($estudianteId, $cursoId, $materiaId, 'parcial', $parcial);
+            }
+            continue;
+        }
+        $notasModel->guardarNota($estudianteId, $cursoId, $materiaId, 'parcial', $parcial, $recalc['parcial'], $gestion, 'auto');
+    }
+
     if ($parcialModel->enviar($cursoId, $materiaId, $gestion, $parcial, $docenteId)) {
         jsonSalida(true);
     }

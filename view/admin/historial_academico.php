@@ -8,28 +8,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'admin') {
 require_once __DIR__ . '/../../config/conexion.php';
 require_once __DIR__ . '/../../includes/csrf.php';
 require_once __DIR__ . '/../../model/CursosModel.php';
-require_once __DIR__ . '/../../model/MateriasModel.php';
 require_once __DIR__ . '/../../model/EstudiantesModel.php';
-require_once __DIR__ . '/../../model/NotasModel.php';
-require_once __DIR__ . '/../../model/ParcialPeriodoModel.php';
+require_once __DIR__ . '/../../model/PlanillasModel.php';
 
 $cursosModel     = new CursosModel();
-$materiasModel   = new MateriasModel();
 $estudiantesModel = new EstudiantesModel();
-$notasModel      = new NotasModel();
+$model           = new PlanillasModel();
 
 $modo        = $_GET['modo'] ?? 'curso';
 $cursos      = $cursosModel->getAll();
 $estudiantes = $estudiantesModel->getAll();
 $gestion     = isset($_GET['gestion']) && $_GET['gestion'] !== '' ? (int) $_GET['gestion'] : (int) date('Y');
-
-function promedioArray(array $vals) {
-    $sum = 0; $n = 0;
-    foreach ($vals as $v) {
-        if ($v !== null) { $sum += $v; $n++; }
-    }
-    return $n > 0 ? round($sum / $n, 1) : null;
-}
 
 function fechaBoletin($ts) {
     $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -54,14 +43,11 @@ function fechaConclusion($anio) {
 
 // ===== MODO CURSO/MATERIA (Entrega de Calificaciones - formato RUBEN SISTEMAS.xlsx) =====
 $calendario = null; // tabla de entregas
-$carreraTipo = 'anual';
-$ciclo = ParcialPeriodoModel::ciclo('anual');
+$ciclo = ['1er Parcial', '2do Parcial', '3er Parcial', '4to Parcial'];
 if ($modo === 'curso') {
     $cursoSel    = $cursosModel->getById(isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0);
     $materiaSel  = null;
     $materiasCurso = $cursoSel ? $cursosModel->getMateriasPorCurso((int) $cursoSel['id']) : [];
-    $carreraTipo = $cursoSel ? ($cursoSel['carrera_tipo'] ?? 'anual') : 'anual';
-    $ciclo       = ParcialPeriodoModel::ciclo($carreraTipo);
 
     if ($cursoSel && isset($_GET['materia_id'])) {
         $materiaSel = null;
@@ -71,109 +57,37 @@ if ($modo === 'curso') {
     }
 
     if ($cursoSel && $materiaSel) {
-        $docenteStmt = $conn->prepare("SELECT d.nombre_completo FROM docente_materia_curso dmc
-                                       JOIN docentes d ON d.id = dmc.docente_id
-                                       WHERE dmc.curso_id = ? AND dmc.materia_id = ? LIMIT 1");
-        $docenteStmt->bind_param("ii", $cursoSel['id'], $materiaSel['id']);
-        $docenteStmt->execute();
-        $docenteRow = $docenteStmt->get_result()->fetch_assoc();
-        $docenteStmt->close();
-        $cursoSel['docente_nombre'] = $docenteRow['nombre_completo'] ?? 'Asignado';
-
-        $filas = $notasModel->getParcialesPorCurso((int) $cursoSel['id'], (int) $materiaSel['id']);
-        $calendario = [];
-        foreach ($filas as $f) {
-            $id = (int) $f['estudiante_id'];
-            if (!isset($calendario[$id])) {
-                $calendario[$id] = [
-                    'nombre' => $f['nombre_completo'],
-                    'matricula' => $f['matricula'],
-                    'notas' => [],
-                    'parcialUnico' => null,
-                    'final' => null,
-                ];
-            }
-            $act = $f['nombre_actividad'];
-            if ($f['nota'] === null) continue;
-            if ($act === 'Parcial') {
-                $calendario[$id]['parcialUnico'] = (float) $f['nota'];
-            } elseif (in_array($act, $ciclo, true)) {
-                $calendario[$id]['notas'][$act] = (float) $f['nota'];
-            }
+        $d = $model->datosEntrega((int) $cursoSel['id'], (int) $materiaSel['id']);
+        if ($d) {
+            $cursoSel   = $d['curso'];   // incluye docente_nombre
+            $materiaSel = $d['materia'];
+            $ciclo      = $d['ciclo'];
+            $calendario = $d['calendario'];
         }
-        foreach ($calendario as &$d) {
-            $d['final'] = !empty($d['notas']) ? promedioArray($d['notas']) : $d['parcialUnico'];
-        }
-        unset($d);
-        ksort($calendario);
     }
 }
 
 // ===== MODO ESTUDIANTE (Kardex - formato historial.xlsx) =====
 $kardex = null;
 if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
-    $estId   = (int) $_GET['estudiante_id'];
-    $est     = $estudiantesModel->getById($estId);
-    $notas   = $est ? $notasModel->getResumenNotas($estId) : [];
-    $kardex  = ['estudiante' => $est, 'filas' => []];
-    if ($est) {
-        $grupos = [];
-        foreach ($notas as $n) {
-            if (($n['tipo'] ?? '') !== 'parcial') continue;
-            $act = $n['nombre_actividad'];
-            if (!in_array($act, ['1er Parcial', '2do Parcial', '3er Parcial', '4to Parcial', 'Parcial'], true)) continue;
-            $clave = (int) $n['materia_id'] . '|' . (int) $n['gestion'] . '|' . (int) $n['curso_id'];
-            if (!isset($grupos[$clave])) {
-                $grupos[$clave] = [
-                    'gestion' => (int) $n['gestion'],
-                    'semestre' => (int) ($n['semestre'] ?? 0),
-                    'codigo' => $n['codigo'],
-                    'materia' => $n['materia'],
-                    'curso' => $n['curso'],
-                    'notas' => [],
-                    'nota' => null,
-                ];
-            }
-            if ($act === 'Parcial') {
-                $grupos[$clave]['nota'] = (float) $n['nota'];
-            } else {
-                $grupos[$clave]['notas'][$act] = (float) $n['nota'];
-            }
-        }
-        foreach ($grupos as $g) {
-            if ($g['nota'] === null && !empty($g['notas'])) {
-                $g['nota'] = promedioArray($g['notas']);
-            }
-            $kardex['filas'][] = $g;
-        }
-        usort($kardex['filas'], function ($a, $b) {
-            if ($a['gestion'] !== $b['gestion']) return $a['gestion'] - $b['gestion'];
-            return strcmp($a['materia'], $b['materia']);
-        });
-
-        $acum = 0; $n = 0; $aprobadas = 0;
-        foreach ($kardex['filas'] as $f) {
-            if ($f['nota'] !== null) {
-                $acum += $f['nota'];
-                $n++;
-                if ($f['nota'] >= 61) $aprobadas++;
-            }
-        }
-        $kardex['promedio'] = $n > 0 ? round($acum / $n, 1) : 0;
-        $kardex['aprobadas'] = $aprobadas;
-        $kardex['carrera'] = $est && $notas ? ($notas[0]['carrera_nombre'] ?? '') : '';
-    }
+    $kardex = $model->datosHistorial((int) $_GET['estudiante_id']);
 }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Académico</title>
+    <title><?php echo $modo === 'curso' ? 'Entrega de Calificaciones' : 'Historial Académico'; ?></title>
     <link rel="stylesheet" href="/centralizador_notas/css/estilos_menu.css">
-    <link rel="stylesheet" href="/centralizador_notas/css/estilos_historial.css">
+    <link rel="stylesheet" href="/centralizador_notas/css/estilos_historial.css?v=6">
     <script defer src="/centralizador_notas/js/script_menu.js"></script>
+    <script defer src="/centralizador_notas/js/script_planillas.js?v=9"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
+    <style>
+        @media print {
+            @page { size: <?php echo $modo === 'curso' ? 'A4 landscape' : 'A4 portrait'; ?>; margin: 7mm; }
+        }
+    </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
@@ -191,7 +105,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
     </div>
 
     <div class="historial-container">
-        <h1>Historial Académico</h1>
+        <h1><?php echo $modo === 'curso' ? 'Entrega de Calificaciones' : 'Historial Académico'; ?></h1>
 
         <!-- Selector de modo -->
         <div class="modo-switch">
@@ -204,7 +118,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                 <input type="hidden" name="modo" value="curso">
                 <div class="form-group">
                     <label>Curso</label>
-                    <select name="curso_id" id="selCurso" required>
+                    <select name="curso_id" id="selCurso" onchange="this.form.submit()" required>
                         <option value="">-- Seleccionar --</option>
                         <?php foreach ($cursos as $c): ?>
                             <option value="<?php echo (int) $c['id']; ?>"
@@ -216,7 +130,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                 </div>
                 <div class="form-group">
                     <label>Materia</label>
-                    <select name="materia_id" id="selMateria" required>
+                    <select name="materia_id" id="selMateria" onchange="this.form.submit()" required>
                         <option value="">-- Seleccionar --</option>
                         <?php foreach ($materiasCurso as $mc): ?>
                             <option value="<?php echo (int) $mc['id']; ?>"
@@ -232,6 +146,16 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
             <?php if ($calendario !== null): ?>
                 <!-- ENTREGA DE CALIFICACIONES (calco de RUBEN SISTEMAS.xlsx) -->
                 <div class="sheet">
+                    <div class="planilla-tools">
+                        <button type="button" class="btn btn-primary" data-planilla-accion="editar" data-hoja="entrega-hoja"><i class="fas fa-pen"></i> Editar celdas</button>
+                        <button type="button" class="btn btn-success" data-planilla-accion="guardar" data-hoja="entrega-hoja"><i class="fas fa-save"></i> Guardar cambios</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="restablecer" data-hoja="entrega-hoja"><i class="fas fa-undo"></i> Restablecer tabla</button>
+                        <span class="tools-sep"></span>
+                        <button type="button" class="btn btn-success" data-planilla-accion="add-col" data-hoja="entrega-hoja"><i class="fas fa-plus"></i> Agregar columna</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="remove-col" data-hoja="entrega-hoja"><i class="fas fa-minus"></i> Quitar columna</button>
+                        <button type="button" class="btn btn-success" data-planilla-accion="add-row" data-hoja="entrega-hoja"><i class="fas fa-plus"></i> Agregar fila</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="remove-row" data-hoja="entrega-hoja"><i class="fas fa-minus"></i> Quitar fila</button>
+                    </div>
                     <div class="sheet-head">
                         <img src="/centralizador_notas/view/img/escudo.jpg" alt="Escudo" class="sheet-logo">
                         <div class="sheet-school">
@@ -268,12 +192,12 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                             <td class="f-val"><?php echo (int) ($cursoSel['gestion'] ?? $gestion); ?></td>
                         </tr>
                         <tr>
-                            <td class="f-lbl">DOOCENTE</td>
+                            <td class="f-lbl">DOCENTE:</td>
                             <td class="f-val"><?php echo htmlspecialchars($cursoSel['docente_nombre'] ?? 'Asignado'); ?></td>
                         </tr>
                     </table>
 
-                    <table class="tabla-entrega">
+                    <table id="entrega-hoja" class="tabla-entrega" data-planilla-hoja data-tipo="entrega" data-clave="entrega-<?php echo (int) ($cursoSel['id'] ?? 0) . '-' . (int) ($materiaSel['id'] ?? 0); ?>">
                         <thead>
                             <tr>
                                 <th class="th-nro">N°</th>
@@ -284,7 +208,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                                 <th>PROMEDIO</th>
                                 <th>INSTANCIA</th>
                                 <th>NOTA FINAL</th>
-                                <th>OBSERBACION</th>
+                                <th>OBSERVACIÓN</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -324,7 +248,16 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                         </div>
                     </div>
                 </div>
-                <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                <div class="planilla-acciones">
+                    <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                    <form method="POST" action="/centralizador_notas/controller/ExportarPlanillaController.php" class="export-form">
+                        <input type="hidden" name="tipo" value="entrega">
+                        <input type="hidden" name="curso_id" value="<?php echo (int) $cursoSel['id']; ?>">
+                        <input type="hidden" name="materia_id" value="<?php echo (int) $materiaSel['id']; ?>">
+                        <?php echo csrf_campo(); ?>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    </form>
+                </div>
             <?php endif; ?>
 
         <?php else: ?>
@@ -333,7 +266,7 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                 <input type="hidden" name="modo" value="estudiante">
                 <div class="form-group">
                     <label>Estudiante</label>
-                    <select name="estudiante_id" required>
+                    <select name="estudiante_id" onchange="this.form.submit()" required>
                         <option value="">-- Seleccionar --</option>
                         <?php foreach ($estudiantes as $e): ?>
                             <option value="<?php echo (int) $e['id']; ?>"
@@ -349,6 +282,16 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
             <?php if ($kardex !== null && $kardex['estudiante']): ?>
                 <!-- HISTORIAL ACADÉMICO / KARDEX -->
                 <div class="sheet">
+                    <div class="planilla-tools">
+                        <button type="button" class="btn btn-primary" data-planilla-accion="editar" data-hoja="kardex-hoja"><i class="fas fa-pen"></i> Editar celdas</button>
+                        <button type="button" class="btn btn-success" data-planilla-accion="guardar" data-hoja="kardex-hoja"><i class="fas fa-save"></i> Guardar cambios</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="restablecer" data-hoja="kardex-hoja"><i class="fas fa-undo"></i> Restablecer tabla</button>
+                        <span class="tools-sep"></span>
+                        <button type="button" class="btn btn-success" data-planilla-accion="add-col" data-hoja="kardex-hoja"><i class="fas fa-plus"></i> Agregar columna</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="remove-col" data-hoja="kardex-hoja"><i class="fas fa-minus"></i> Quitar columna</button>
+                        <button type="button" class="btn btn-success" data-planilla-accion="add-row" data-hoja="kardex-hoja"><i class="fas fa-plus"></i> Agregar fila</button>
+                        <button type="button" class="btn btn-secondary" data-planilla-accion="remove-row" data-hoja="kardex-hoja"><i class="fas fa-minus"></i> Quitar fila</button>
+                    </div>
                     <div class="sheet-head">
                         <img src="/centralizador_notas/view/img/escudo.jpg" alt="Escudo" class="sheet-logo">
                         <div class="sheet-school">
@@ -395,14 +338,14 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                         </tr>
                     </table>
 
-                    <table class="tabla-kardex">
+                    <table id="kardex-hoja" class="tabla-kardex" data-planilla-hoja data-clave="kardex-<?php echo (int) ($kardex['estudiante']['id'] ?? 0); ?>">
                         <thead>
                             <tr>
                                 <th>N°</th>
                                 <th>GESTIÓN ACADÉMICA</th>
                                 <th>SEMESTRE/AÑO</th>
                                 <th>CÓDIGO</th>
-                                <th>ASIGNATURA</th>
+                                <th class="th-nombre">ASIGNATURA</th>
                                 <th>PRE REQUISITO</th>
                                 <th>NOTA</th>
                                 <th>PRUEBA RECUP.</th>
@@ -481,7 +424,15 @@ if ($modo === 'estudiante' && isset($_GET['estudiante_id'])) {
                         </tr>
                     </table>
                 </div>
-                <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                <div class="planilla-acciones">
+                    <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                    <form method="POST" action="/centralizador_notas/controller/ExportarPlanillaController.php" class="export-form">
+                        <input type="hidden" name="tipo" value="historial">
+                        <input type="hidden" name="estudiante_id" value="<?php echo (int) $kardex['estudiante']['id']; ?>">
+                        <?php echo csrf_campo(); ?>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    </form>
+                </div>
             <?php endif; ?>
         <?php endif; ?>
     </div>

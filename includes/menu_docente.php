@@ -9,13 +9,9 @@
         <div class="menu-label"><i class="fas fa-book-open"></i><span>Mis Materias</span></div>
     </a>
 
-    <div class="menu-item" onclick="toggleSubmenu(this)">
-        <div class="menu-label"><i class="fas fa-file-alt"></i><span>Gestion Academica</span></div>
-        <i class="fas fa-chevron-right arrow"></i>
-    </div>
-    <div class="submenu">
-        <a href="/centralizador_notas/view/docente/registro_pedagogico.php">Registro Pedagogico</a>
-    </div>
+    <a href="/centralizador_notas/view/docente/registro_pedagogico.php" class="menu-item">
+        <div class="menu-label"><i class="fas fa-file-alt"></i><span>Registro Pedagógico</span></div>
+    </a>
 
     <div class="menu-item" onclick="toggleSubmenu(this)">
         <div class="menu-label"><i class="fas fa-comments"></i><span>Comunicacion</span></div>

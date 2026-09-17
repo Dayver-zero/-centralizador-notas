@@ -1,17 +1,6 @@
 -- =============================================================
--- Centralizador de Notas - Instalación limpia (solo estructura + admin)
+-- Centralizador de Notas - Instalación completa para MySQL
 -- Proyecto: Instituto Tecnológico PACCIOLI
--- =============================================================
--- Este archivo crea la base de datos, todas las tablas y el usuario
--- administrador para poder ingresar al sistema. NO incluye datos
--- ficticios: el admin crea carreras, cursos, materias, etc. desde la web.
---
--- Usuario inicial:
---   admin / admin123
---
--- Si quieres una instalación con datos de prueba (carreras, cursos,
--- docentes, estudiantes, notas y asistencia de ejemplo), usa
--- sql/setup_mysql_completo.sql
 -- =============================================================
 
 DROP DATABASE IF EXISTS centralizador_notas;
@@ -241,11 +230,83 @@ CREATE TABLE parcial_periodo (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =============================================================
--- USUARIO ADMINISTRADOR
+-- DATOS INICIALES
 -- =============================================================
--- Contraseña: admin123
+
+INSERT INTO carreras (nombre, duracion, tipo, estado) VALUES
+('Ingenieria en Sistemas Computacionales', 3, 'anual', 'activa'),
+('Ingenieria en Administracion de Empresas', 3, 'anual', 'activa'),
+('Contaduria Publica', 3, 'anual', 'activa'),
+('Ingenieria Industrial', 3, 'anual', 'activa');
+
+INSERT INTO materias (nombre, codigo, carrera_id) VALUES
+('Programacion I', 'PROG101', 1),
+('Programacion II', 'PROG102', 1),
+('Base de Datos', 'BD101', 1),
+('Redes de Computadoras', 'RED101', 1),
+('Matematicas I', 'MAT101', 2),
+('Administracion General', 'ADM101', 2),
+('Contabilidad I', 'CONT101', 3),
+('Costos', 'COST101', 3),
+('Produccion', 'PROD101', 4),
+('Investigacion de Operaciones', 'INV101', 4);
+
+INSERT INTO docentes (ci, nombre_completo, email, telefono, password) VALUES
+('12345678', 'Ing. Carlos Mendoza', 'carlos.mendoza@pacciol.edu', '70123456', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC'),
+('87654321', 'Ing. Maria Fernandez', 'maria.fernandez@pacciol.edu', '70987654', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC'),
+('11223344', 'Lic. Juan Perez', 'juan.perez@pacciol.edu', '70112233', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC');
+
+INSERT INTO estudiantes (ci, nombre_completo, matricula, anio_ingreso, email, password) VALUES
+('55667788', 'Ana Lopez Garcia', 'MAT2024001', 2024, 'ana.lopez@est.pacciol.edu', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC'),
+('55667789', 'Pedro Ramirez Soliz', 'MAT2024002', 2024, 'pedro.ramirez@est.pacciol.edu', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC'),
+('55667790', 'Laura Martinez Vargas', 'MAT2024003', 2024, 'laura.martinez@est.pacciol.edu', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC');
+
+INSERT INTO cursos (nombre, anio, paralelo, carrera_id, gestion, semestre) VALUES
+('Curso 1', 2025, 'A', 1, 2025, 1),
+('Curso 2', 2025, 'B', 1, 2025, 2),
+('Curso 3', 2025, 'A', 2, 2025, 1),
+('Curso 4', 2025, 'B', 3, 2025, 1);
+
+INSERT INTO estudiantes_cursos (estudiante_id, curso_id, semestre) VALUES
+(1, 1, 1),
+(2, 1, 1),
+(3, 1, 1),
+(1, 3, 1),
+(3, 4, 1);
+
+INSERT INTO docente_materia_curso (docente_id, materia_id, curso_id) VALUES
+(1, 1, 1),
+(1, 2, 2),
+(1, 3, 1),
+(2, 5, 3),
+(2, 6, 3),
+(3, 7, 4),
+(3, 8, 4);
+
 INSERT INTO usuarios (username, password, rol, referer_id) VALUES
-('admin', '$2y$12$NYzMD.i1rsKfll6e.unnyuvAQBOhUkzuAYnIMZ1avPg7cqEFWKOCG', 'admin', 1);
+('admin', '$2y$12$NYzMD.i1rsKfll6e.unnyuvAQBOhUkzuAYnIMZ1avPg7cqEFWKOCG', 'admin', 1),
+('carlos.mendoza', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'docente', 1),
+('maria.fernandez', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'docente', 2),
+('juan.perez', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'docente', 3),
+('ana.lopez', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'estudiante', 1),
+('pedro.ramirez', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'estudiante', 2),
+('laura.martinez', '$2y$12$At1jA8gSSh0sQ5T.14mK7.OgopzjhupZafPo/iYtD85ThJEaWdVlC', 'estudiante', 3);
+
+INSERT INTO notas (estudiante_id, curso_id, materia_id, tipo, nombre_actividad, nota, gestion) VALUES
+(1, 1, 1, 'parcial', 'Evaluacion Teorica', 85, 2025),
+(1, 1, 1, 'parcial', 'Investigacion', 90, 2025),
+(1, 1, 1, 'parcial', 'Practica', 78, 2025),
+(2, 1, 1, 'parcial', 'Evaluacion Teorica', 70, 2025),
+(2, 1, 1, 'parcial', 'Investigacion', 75, 2025),
+(3, 1, 1, 'parcial', 'Practica', 82, 2025);
+
+INSERT INTO asistencia (estudiante_id, curso_id, materia_id, fecha, estado, gestion) VALUES
+(1, 1, 1, '2025-05-10', 'presente', 2025),
+(2, 1, 1, '2025-05-10', 'ausente', 2025),
+(3, 1, 1, '2025-05-10', 'justificado', 2025),
+(1, 1, 1, '2025-05-12', 'presente', 2025),
+(2, 1, 1, '2025-05-12', 'presente', 2025),
+(3, 1, 1, '2025-05-12', 'presente', 2025);
 
 SET FOREIGN_KEY_CHECKS = 1;
 

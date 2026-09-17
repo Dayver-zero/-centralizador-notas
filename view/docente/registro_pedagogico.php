@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'docente') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['rol'] ?? '', ['docente', 'admin'], true)) {
     header("Location: /centralizador_notas/index.php?error=session");
     exit;
 }
@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../config/conexion.php';
 require_once __DIR__ . '/../../includes/csrf.php';
 require_once __DIR__ . '/../../model/EstudiantesModel.php';
 require_once __DIR__ . '/../../model/CursosModel.php';
+require_once __DIR__ . '/../../model/DocentesModel.php';
 require_once __DIR__ . '/../../model/NotasModel.php';
 require_once __DIR__ . '/../../model/AsistenciaModel.php';
 require_once __DIR__ . '/../../model/RegistroConfigModel.php';
@@ -23,8 +24,121 @@ $parcialModel     = new ParcialPeriodoModel();
 $cursoId   = isset($_GET['curso_id'])   ? (int) $_GET['curso_id']   : 0;
 $materiaId = isset($_GET['materia_id']) ? (int) $_GET['materia_id'] : 0;
 $docenteId = (int) $_SESSION['referer_id'];
+$esAdmin   = ($_SESSION['rol'] ?? '') === 'admin';
 
-if (!$cursoId || !$materiaId || !$cursosModel->esDocenteAsignado($docenteId, $materiaId, $cursoId)) {
+if (!$cursoId || !$materiaId) {
+    // Sin curso/materia: el docente/rector elige antes de abrir la planilla
+    $docModel = new DocentesModel();
+    $selMateriasDoc = $docModel->getMaterias($docenteId);
+    $selCursos = $cursosModel->getAll();
+    $selCursoId = isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0;
+    $selMateriasCurso = $selCursoId ? $cursosModel->getMateriasPorCurso($selCursoId) : [];
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Seleccionar Curso y Materia</title>
+    <link rel="stylesheet" href="/centralizador_notas/css/estilos_menu.css">
+    <script defer src="/centralizador_notas/js/script_menu.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
+    <style>
+        .sel-wrap { position: relative; z-index: 1; max-width: 920px; margin: 80px auto 0; padding: 20px; }
+        .sel-card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 4px 18px rgba(0,0,0,.15); }
+        .sel-card h1 { margin: 0 0 6px; font-size: 1.25rem; }
+        .sel-card .sel-intro { color: #52606d; margin: 0 0 18px; }
+        .sel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+        .sel-item { display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; text-decoration: none; color: inherit; transition: box-shadow .15s, transform .15s; }
+        .sel-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,.14); transform: translateY(-1px); }
+        .sel-item .t { font-weight: 600; }
+        .sel-item .s { font-size: .8rem; color: #64748b; }
+        .sel-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .sel-form label { display: block; margin-bottom: 5px; font-size: .82rem; font-weight: 700; color: #425466; }
+        .sel-form select { padding: 9px 10px; border: 1px solid #cbd2d9; border-radius: 5px; min-width: 230px; background: #fff; color: #243447; }
+        .sel-form .btn { margin-top: 2px; }
+        body.dark-mode .sel-card { background: #17173f; color: #fff; }
+        body.dark-mode .sel-card .sel-intro { color: rgba(255,255,255,.72); }
+        body.dark-mode .sel-item { border-color: rgba(255,255,255,.2); }
+        body.dark-mode .sel-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+        body.dark-mode .sel-item .s { color: rgba(255,255,255,.6); }
+        body.dark-mode .sel-form label { color: #fff; }
+        body.dark-mode .sel-form select { background: #17173f; border-color: rgba(255,255,255,.2); color: #fff; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <?php include __DIR__ . '/../../includes/' . ($esAdmin ? 'menu_admin.php' : 'menu_docente.php'); ?>
+    <div class="top-header">
+        <div class="logo-area">
+            <button id="sidebar-toggle" type="button" title="Desplegar o contraer el menu" aria-label="Desplegar o contraer el menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
+            <img src="/centralizador_notas/view/img/escudo.jpg" alt="Logo"><span>Instituto Tecnologico PACCIOLI</span>
+        </div>
+        <div class="user-area">
+            <span>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre_completo'] ?? $_SESSION['username']); ?></span>
+            <button id="modo-btn" title="Cambiar modo">🌙</button>
+        </div>
+    </div>
+
+    <main class="sel-wrap">
+        <div class="sel-card">
+            <h1>Selecciona tu planilla</h1>
+            <p class="sel-intro">Elige el curso y la materia para abrir el Registro Pedagógico.</p>
+            <?php if ($esAdmin): ?>
+                <form method="GET" class="sel-form">
+                    <div>
+                        <label for="sel_curso">Curso</label>
+                        <select name="curso_id" id="sel_curso" onchange="this.form.submit()" required>
+                            <option value="">-- Seleccionar --</option>
+                            <?php foreach ($selCursos as $sc): ?>
+                            <option value="<?php echo (int) $sc['id']; ?>" <?php echo $selCursoId === (int) $sc['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($sc['nombre'] . ' - ' . $sc['paralelo'] . ' (' . (int) $sc['gestion'] . ')'); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php if ($selMateriasCurso): ?>
+                    <div>
+                        <label for="sel_materia">Materia</label>
+                        <select name="materia_id" id="sel_materia" onchange="this.form.submit()" required>
+                            <option value="">-- Seleccionar materia --</option>
+                            <?php foreach ($selMateriasCurso as $sm): ?>
+                            <option value="<?php echo (int) $sm['id']; ?>">
+                                <?php echo htmlspecialchars($sm['nombre'] . ' (' . $sm['codigo'] . ')'); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                </form>
+            <?php else: ?>
+                <?php if ($selMateriasDoc): ?>
+                <div class="sel-grid">
+                    <?php foreach ($selMateriasDoc as $sm):
+                        $href = '/centralizador_notas/view/docente/registro_pedagogico.php?curso_id=' . (int) $sm['curso_id'] . '&materia_id=' . (int) $sm['materia_id'];
+                    ?>
+                    <a class="sel-item" href="<?php echo $href; ?>">
+                        <div>
+                            <div class="t"><?php echo htmlspecialchars($sm['materia']); ?></div>
+                            <div class="s"><?php echo htmlspecialchars($sm['curso']); ?> - Gestión <?php echo (int) $sm['gestion']; ?> (<?php echo htmlspecialchars($sm['codigo']); ?>)</div>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                    <p class="sin-datos">No tienes materias asignadas.</p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </main>
+    <script src="/centralizador_notas/js/fondo.js"></script>
+</body>
+</html>
+<?php
+    exit;
+}
+
+if (!$esAdmin && !$cursosModel->esDocenteAsignado($docenteId, $materiaId, $cursoId)) {
     header("Location: /centralizador_notas/view/docente/dashboard.php?error=forbidden");
     exit;
 }
@@ -86,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$nombreDocente = $_SESSION['nombre_completo'] ?? 'DOCENTE NO IDENTIFICADO';
+$nombreDocente = $_SESSION['nombre_completo'] ?? ($esAdmin ? 'ADMINISTRADOR' : 'DOCENTE NO IDENTIFICADO');
 
 $materia = null;
 if ($materiaId) {
@@ -150,7 +264,7 @@ function filaVacia($nro = '') {
         <td></td><td></td>
         <?php for ($i = 0; $i < 1; $i++): ?><td></td><?php endfor; ?>
         <?php for ($i = 0; $i < 1; $i++): ?><td></td><?php endfor; ?>
-        <?php for ($i = 0; $i < 1; $i++): ?><td></td><?php endfor; ?>
+        <?php for ($i = 0; $i < 2; $i++): ?><td></td><?php endfor; ?>
         <?php for ($i = 0; $i < 3; $i++): ?><td></td><?php endfor; ?>
     </tr>
 <?php
@@ -170,7 +284,7 @@ function filaVacia($nro = '') {
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <?php include __DIR__ . '/../../includes/menu_docente.php'; ?>
+    <?php include __DIR__ . ($esAdmin ? '/../../includes/menu_admin.php' : '/../../includes/menu_docente.php'); ?>
 
     <div class="top-header">
         <div class="logo-area">
@@ -213,7 +327,7 @@ function filaVacia($nro = '') {
             <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
             <button class="btn btn-success" type="button" onclick="regConfig.aplicar()"><i class="fas fa-save"></i> Aplicar cambios</button>
             <button class="btn btn-secondary" type="button" onclick="regConfig.descartar()"><i class="fas fa-undo"></i> Descartar</button>
-            <a href="/centralizador_notas/view/docente/dashboard.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+            <a href="<?php echo $esAdmin ? '/centralizador_notas/view/admin/planillas_admin.php' : '/centralizador_notas/view/docente/dashboard.php'; ?>" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
 
         <?php if ($curso && $materia): ?>
@@ -277,7 +391,7 @@ function filaVacia($nro = '') {
                             <th rowspan="4" class="reg-asist">ASISTENCIA</th>
                             <th rowspan="4" class="reg-pct">PORCENTAJE DE ASISTENCIA</th>
                             <th colspan="1" class="reg-teoria-tit">TEORÍA (30%)</th>
-                            <th colspan="2" class="reg-practica-tit">PRÁCTICA (70%)</th>
+                            <th colspan="3" class="reg-practica-tit">PRÁCTICA (70%)</th>
                             <th rowspan="3" class="reg-suma-tit">TEORIA</th>
                             <th rowspan="3" class="reg-suma-tit">PRACTICA</th>
                             <th rowspan="3" class="reg-suma-tit"><?php echo htmlspecialchars($etiquetaActivo !== '' ? $etiquetaActivo : 'PARCIAL'); ?></th>
@@ -286,7 +400,7 @@ function filaVacia($nro = '') {
                             <th colspan="1" class="reg-cuarto">CUARTO PARCIAL</th>
                             <th colspan="1" class="reg-conocer-tit">CONOCER (30 %)</th>
                             <th colspan="1" class="reg-hacer-tit">HACER (60%)</th>
-                            <th colspan="1" class="reg-ser-tit">SER (10%)</th>
+                            <th colspan="2" class="reg-ser-tit">SER (10%)</th>
                         </tr>
                         <tr class="reg-h3">
                             <th rowspan="2" class="reg-fecha"
@@ -294,12 +408,14 @@ function filaVacia($nro = '') {
                                     colspan="1"><?php echo $fechasAsistencia[0] ? date('d/m/Y', strtotime($fechasAsistencia[0])) : 'F1'; ?></th>
                             <th colspan="1" class="reg-eval">(30 PTOS) EVALUACION TEORICA</th>
                             <th colspan="1" class="reg-proy">(60 PTOS) ENTREGA DE PROYECTO FINAL</th>
-                            <th class="reg-ser-vert" data-nombre="SER" title="Clic para editar el nombre">SER</th>
+                            <th colspan="1" class="reg-ser-vert" data-nombre="PUNTUALIDAD Y/O DESEMPENO" title="Clic para editar el nombre">PUNTUALIDAD Y/O DESEMPENO</th>
+<th colspan="1" class="reg-ser-vert" data-nombre="PUNTUALIDAD EN LA ENTREGA" title="Clic para editar el nombre">PUNTUALIDAD EN LA ENTREGA</th>
                         </tr>
                         <tr class="reg-h4">
-                            <th class="reg-num reg-num-conocer" data-nombre="EVALUACION" title="Clic para editar el nombre">EVALUACION</th>
-                            <th class="reg-num reg-num-hacer" data-nombre="PRACTICA" title="Clic para editar el nombre">PRACTICA</th>
-                            <th class="reg-num reg-num-ser" data-nombre="SER" title="Clic para editar el nombre">SER</th>
+<th class="reg-num reg-num-conocer" data-nombre="EVALUACION" data-pts="30" title="Clic para editar el nombre">EVALUACION</th>
+<th class="reg-num reg-num-hacer" data-nombre="PRACTICA" data-pts="60" title="Clic para editar el nombre">PRACTICA</th>
+<th class="reg-num reg-num-ser" data-nombre="PUNTUALIDAD Y/O DESEMPENO" data-pts="10" title="Clic para editar el nombre"></th>
+<th class="reg-num reg-num-ser" data-nombre="PUNTUALIDAD EN LA ENTREGA" data-pts="10" title="Clic para editar el nombre"></th>
                             <th class="reg-suma-val">30</th>
                             <th class="reg-suma-val">70</th>
                             <th class="reg-suma-val">100</th>
@@ -337,6 +453,14 @@ function filaVacia($nro = '') {
                                     $practica = $tieneHacer1 ? round($hacerSum + $serSum, 0) : null;
                                     $parcial = ($teoria !== null && $practica !== null) ? round($teoria + $practica, 0) : null;
                                 }
+
+                                $valConocer1 = notaCelda($allNotas, 'conocer', 'Conocer 1');
+                                $valHacer1   = notaCelda($allNotas, 'hacer', 'Hacer 1');
+                                $valSer1     = notaCelda($allNotas, 'ser', 'Ser 1');
+                                $valSer2     = notaCelda($allNotas, 'ser', 'Ser 2');
+                                $conocerRojos = $conocerSum > 30;
+                                $hacerRojos   = $hacerSum > 60;
+                                $serRojos     = $serSum > 10;
                             ?>
                             <tr data-estudiante="<?php echo $estId; ?>">
                                 <td class="reg-nro"><?php echo $nro++; ?></td>
@@ -354,32 +478,40 @@ function filaVacia($nro = '') {
                                     </td>
                                 <td class="reg-asist"><?php echo (int) $asistencia['total']; ?></td>
                                 <td class="reg-pct"><?php echo $asistencia['porcentaje']; ?>%</td>
-                                <td class="reg-conocer-cel"
+                                <td class="reg-conocer-cel<?php echo $conocerRojos && $valConocer1 !== '' ? ' reg-limit' : ''; ?>"
                                     tabindex="0"
                                     data-tipo="conocer"
                                     data-actividad="Conocer 1"
                                     data-est="<?php echo (int) $estId; ?>"
                                     onclick="regCelda.onClick(this)">
-                                    <?php echo notaCelda($allNotas, 'conocer', 'Conocer 1'); ?>
+                                    <?php echo $valConocer1; ?>
                                 </td>
-                                <td class="reg-hacer-cel"
+                                <td class="reg-hacer-cel<?php echo $hacerRojos && $valHacer1 !== '' ? ' reg-limit' : ''; ?>"
                                     tabindex="0"
                                     data-tipo="hacer"
                                     data-actividad="Hacer 1"
                                     data-est="<?php echo (int) $estId; ?>"
                                     onclick="regCelda.onClick(this)">
-                                    <?php echo notaCelda($allNotas, 'hacer', 'Hacer 1'); ?>
+                                    <?php echo $valHacer1; ?>
                                 </td>
-                                <td class="reg-ser-cel"
+                                <td class="reg-ser-cel<?php echo $serRojos && $valSer1 !== '' ? ' reg-limit' : ''; ?>"
                                     tabindex="0"
                                     data-tipo="ser"
                                     data-actividad="Ser 1"
                                     data-est="<?php echo (int) $estId; ?>"
                                     onclick="regCelda.onClick(this)">
-                                    <?php echo notaCelda($allNotas, 'ser', 'Ser 1'); ?>
+                                    <?php echo $valSer1; ?>
                                 </td>
-                                <td class="reg-suma-val"><?php echo fmtNota($teoria); ?></td>
-                                <td class="reg-suma-val"><?php echo fmtNota($practica); ?></td>
+                                <td class="reg-ser-cel<?php echo $serRojos && $valSer2 !== '' ? ' reg-limit' : ''; ?>"
+                                    tabindex="0"
+                                    data-tipo="ser"
+                                    data-actividad="Ser 2"
+                                    data-est="<?php echo (int) $estId; ?>"
+                                    onclick="regCelda.onClick(this)">
+                                    <?php echo $valSer2; ?>
+                                </td>
+                                <td class="reg-suma-val<?php echo $teoria !== null && $conocerRojos ? ' reg-limit' : ''; ?>"><?php echo fmtNota($teoria); ?></td>
+                                <td class="reg-suma-val<?php echo $practica !== null && ($hacerRojos || $serRojos) ? ' reg-limit' : ''; ?>"><?php echo fmtNota($practica); ?></td>
                                 <td class="reg-suma-val reg-parcial"
                                     tabindex="0"
                                     data-tipo="parcial"

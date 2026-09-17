@@ -5,6 +5,12 @@ config/conexion.php
 *.xlsx
 *.rar
 
+# Carpeta residual del compañero (fuente de la integración)
+centralizador_notas/
+
+# Exportes de sesion de herramientas de desarrollo
+session-ses_*.md
+
 # Basura de sistema operativo
 Thumbs.db
 .DS_Store

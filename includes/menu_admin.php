@@ -56,13 +56,21 @@
         <a href="/centralizador_notas/view/admin/gestion_periodos.php">Gestionar Parciales</a>
     </div>
 
-    <div class="menu-item" onclick="toggleSubmenu(this)">
-        <div class="menu-label"><i class="fas fa-file-alt"></i><span>Historial Académico</span></div>
-        <i class="fas fa-chevron-right arrow"></i>
-    </div>
-    <div class="submenu">
-        <a href="/centralizador_notas/view/admin/historial_academico.php">Consultar Notas</a>
-    </div>
+    <a href="/centralizador_notas/view/admin/historial_academico.php?modo=curso" class="menu-item">
+        <div class="menu-label"><i class="fas fa-list-check"></i><span>Entrega de Calificaciones</span></div>
+    </a>
+
+    <a href="/centralizador_notas/view/admin/centralizador.php" class="menu-item">
+        <div class="menu-label"><i class="fas fa-layer-group"></i><span>Centralizador</span></div>
+    </a>
+
+    <a href="/centralizador_notas/view/admin/historial_academico.php?modo=estudiante" class="menu-item">
+        <div class="menu-label"><i class="fas fa-book-open"></i><span>Historial Académico</span></div>
+    </a>
+
+    <a href="/centralizador_notas/view/admin/planillas_admin.php" class="menu-item">
+        <div class="menu-label"><i class="fas fa-file-excel"></i><span>Plantillas Excel</span></div>
+    </a>
 
     <div class="menu-item" onclick="toggleSubmenu(this)">
         <div class="menu-label"><i class="fas fa-comments"></i><span>Mensajes</span></div>

@@ -1,9 +1,11 @@
 /* ============================================
-   ESTILOS - HISTORIAL ACADÉMICO
-   Hojas calcadas de RUBEN SISTEMAS.xlsx (Entrega)
-   e historial.xlsx (Kardex)
+   ESTILOS - HISTORIAL ACADEMICO
+   (SISTEMAS/Entrega + HISTORIAL/Kardex + CENTRALIZADOR)
+   Formato calcado de REGISTRO.xlsx / SISTEMAS.xlsx /
+   historial.xlsx / CENTRALIZADOR.xlsx
    ============================================ */
 
+/* ---- Contenedor general ---- */
 .historial-container {
     margin-left: 0;
     margin-top: 80px;
@@ -28,22 +30,55 @@
     gap: 12px;
     flex-wrap: wrap;
     align-items: flex-end;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid #ccc;
+    border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
 }
 
-.filtro-form .form-group {
-    margin-bottom: 0;
-}
+.filtro-form .form-group { margin-bottom: 0; }
 
 .filtro-form .form-group label {
     display: block;
-    color: #007acc;
-    font-size: 0.8rem;
+    color: #243447;
+    font-size: 0.82rem;
     margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.filtro-form select {
+    min-width: 240px;
+    padding: 9px 12px;
+    border: 1px solid #cbd2d9;
+    border-radius: 6px;
+    background: #fff;
+    color: #243447;
+}
+
+.filtro-form select option {
+    background: #fff;
+    color: #243447;
+}
+
+body.dark-mode .filtro-form {
+    background: #ffffff;
+}
+
+body.dark-mode .filtro-form .form-group label {
+    color: #243447;
+}
+
+body.dark-mode .filtro-form select {
+    background: #ffffff !important;
+    color: #243447 !important;
+    border-color: #cbd2d9 !important;
+}
+
+body.dark-mode .filtro-form select option {
+    background: #ffffff !important;
+    color: #243447 !important;
 }
 
 .btn-print {
@@ -52,99 +87,223 @@
     color: #fff;
 }
 
-/* ---- Hoja en blanco (formulario impreso) ---- */
+/* ---- Acciones de planilla (imprimir / exportar) ---- */
+.planilla-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+}
+.planilla-acciones .btn-print { margin-top: 0; }
+.export-form { display: inline-block; margin: 0; }
+.export-form .btn { margin: 0; }
+
+/* ---- Barra de herramientas de planilla ---- */
+.planilla-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin: 0 0 14px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.planilla-tools .btn {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: transform .2s, box-shadow .2s, background .2s;
+}
+
+.planilla-tools .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.planilla-tools .btn-success {
+    background: #16803c;
+    color: #fff;
+}
+
+body.dark-mode .planilla-tools .btn-success {
+    background: #1f9d4d !important;
+    color: #fff !important;
+}
+
+.planilla-tools .btn-primary {
+    background: #007acc;
+    color: #fff;
+}
+
+body.dark-mode .planilla-tools .btn-primary {
+    background: #1c8de0 !important;
+    color: #fff !important;
+}
+
+.planilla-tools .btn-secondary {
+    background: #e6e9ef;
+    color: #2b3441;
+    border: 1px solid #9aa4ad;
+}
+
+body.dark-mode .planilla-tools .btn-secondary {
+    background: #dde1e8 !important;
+    color: #232937 !important;
+    border: 1px solid #8f99a6 !important;
+}
+
+.planilla-tools .tools-sep {
+    display: inline-block;
+    width: 1px;
+    align-self: stretch;
+    background: #d5dbe2;
+    margin: 4px 2px;
+}
+
+.planilla-aviso {
+    display: block;
+    margin-bottom: 10px;
+    padding: 8px 14px;
+    background: #d9f7e2;
+    color: #14532d;
+    border: 1px solid #3fbf6f;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* ============================================
+   HOJA (formulario impreso) - papel institucional
+   ============================================ */
 .sheet {
     background: #fff;
     color: #000;
-    border: 1px solid #bbb;
-    border-radius: 8px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-    padding: 18px 22px 24px;
+    border: 2px solid #000;
+    border-radius: 0;
+    box-shadow: 0 4px 18px rgba(0,0,0,.25);
+    padding: 16px 18px 22px;
     margin-bottom: 10px;
-    min-width: 900px;
+    min-width: 1100px;
 }
 
-/* Cabecera con logo y nombre de la institución */
+/* ---- Cabecera institucional ---- */
 .sheet-head {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 8px;
+    gap: 14px;
+    margin-bottom: 6px;
 }
 
-.sheet-logo {
-    height: 62px;
-}
+.sheet-logo { height: 56px; }
 
-.sheet-school {
-    text-align: center;
-    flex: 1;
-}
+.sheet-school { text-align: center; flex: 1; }
 
-.inst-1 {
-    font-size: 11pt;
+.inst-1, .inst-2 {
+    font-size: 13pt;
     font-weight: 700;
     letter-spacing: 2px;
-}
-
-.inst-2 {
-    font-size: 11pt;
-    font-weight: 700;
-    letter-spacing: 2px;
+    line-height: 1.25;
+    color: #000;
 }
 
 .sheet-title {
     text-align: center;
-    font-size: 15pt;
+    font-size: 14pt;
     font-weight: 700;
     letter-spacing: 3px;
-    border: 1.5px solid #000;
+    border: 1px solid #000;
     padding: 5px 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    color: #000;
 }
 
-/* ---- Campos del formulario (Entrega) ---- */
+/* ============================================
+   CAMPOS DEL FORMULARIO (Entrega - SISTEMAS.xlsx)
+   Fila-label gris | Fila-valor blanco, todo con bordes
+   ============================================ */
 .tabla-fields {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .tabla-fields td {
     border: 1px solid #000;
-    padding: 4px 8px;
-    font-size: 8.5pt;
+    padding: 3px 6px;
+    font-size: 8pt;
     color: #000;
+    vertical-align: middle;
 }
 
 .f-lbl {
-    width: 210px;
+    width: 200px;
     font-weight: 700;
-    background: #e3e9ef;
+    background: #dbe3ea;
     color: #000;
 }
 
-.f-val {
-    font-weight: 600;
+.f-val { font-weight: 600; }
+
+.tabla-fields td.f-val[contenteditable="true"],
+.tabla-fields td.enc-val[contenteditable="true"],
+.kardex-enc td.enc-val[contenteditable="true"] {
+    cursor: text;
+    background: #fff;
+    outline: 0;
+    transition: background .15s, box-shadow .15s;
 }
 
-/* ---- Tabla de entregas ---- */
+.tabla-fields td.f-val[contenteditable="true"]:hover,
+.kardex-enc td.enc-val[contenteditable="true"]:hover {
+    background: #eef6ff;
+    box-shadow: inset 0 0 0 1px #0a6cd6;
+}
+
+.tabla-fields td.f-val[contenteditable="true"]:focus,
+.kardex-enc td.enc-val[contenteditable="true"]:focus {
+    background: #fff9db;
+    box-shadow: inset 0 0 0 2px #0a6cd6;
+    outline: none;
+}
+
+/* ============================================
+   TABLA DE CALIFICACIONES (entrega/kardex)
+   - Todas las celdas: borde 1px solid #000
+   - Encabezados: fondo #dbe3ea, negrita, bordes
+   - Filas alternas con separador grueso (2.5px)
+   - Celdas editables: fondo blanco, hover/ focus
+   ============================================ */
 .tabla-entrega,
 .tabla-kardex {
     width: 100%;
+    min-width: 1100px;
     border-collapse: collapse;
-    font-size: 8pt;
+    border: 2px solid #000;
+    font-size: 7.5pt;
 }
 
 .tabla-entrega th,
 .tabla-entrega td,
 .tabla-kardex th,
 .tabla-kardex td {
-    border: 1px solid #000;
-    padding: 4px 6px;
+    border: 1.5px solid #000 !important;
+    padding: 3px 5px;
     text-align: center;
     white-space: nowrap;
     color: #000;
+    background: #fff;
+    vertical-align: middle;
 }
 
 .tabla-entrega th,
@@ -152,128 +311,156 @@
     background: #dbe3ea;
     color: #000;
     font-weight: 700;
-    font-size: 7.5pt;
+    font-size: 7pt;
+    min-height: 32px;
+}
+
+/* Fila: separador grueso entre estudiantes */
+.tabla-entrega tbody tr td,
+.tabla-kardex tbody tr td {
+    border-bottom: 2.5px solid #000 !important;
+    min-height: 26px;
 }
 
 .tabla-entrega .td-nombre,
 .tabla-kardex .td-nombre {
     text-align: left;
-    padding-left: 8px;
+    padding-left: 6px;
     font-weight: 600;
-    min-width: 230px;
+    min-width: 200px;
 }
 
 .tabla-entrega .th-nro,
-.tabla-kardex th:first-child {
-    width: 32px;
-}
+.tabla-kardex th:first-child { width: 30px; }
 
-.tabla-entrega .th-nombre {
-    min-width: 260px;
-}
+/* Centralizador comparte el mismo conjunto de clases */
+.centralizador-table .th-nro { width: 30px; }
+.centralizador-table .th-nombre { min-width: 230px; }
+
+.tabla-entrega .th-nombre,
+.tabla-kardex .th-nombre { min-width: 230px; }
+
+/* Columnas numéricas */
+.tabla-entrega td,
+.tabla-kardex td { min-width: 55px; }
 
 .sin-datos {
     text-align: center;
-    padding: 18px;
+    padding: 14px;
     font-style: italic;
+    border: 1px solid #000 !important;
 }
 
-/* ---- Firmas (Entrega) ---- */
-.firmas {
-    display: flex;
-    justify-content: space-between;
-    padding: 30px 40px 6px;
+/* ---- Celdas editables ---- */
+.tabla-entrega td[contenteditable="true"],
+.tabla-kardex td[contenteditable="true"],
+.tabla-entrega th[contenteditable="true"],
+.tabla-kardex th[contenteditable="true"] {
+    cursor: text;
+    background: #fff;
+    outline: 0;
+    transition: background .15s, box-shadow .15s;
 }
 
-.firma {
-    text-align: center;
-    width: 300px;
+.tabla-entrega td[contenteditable="true"]:hover,
+.tabla-kardex td[contenteditable="true"]:hover {
+    background: #eef6ff;
+    box-shadow: inset 0 0 0 1px #0a6cd6;
 }
 
-.firma-linea {
-    border-bottom: 1px solid #000;
-    margin-bottom: 6px;
+.tabla-entrega td[contenteditable="true"]:focus,
+.tabla-kardex td[contenteditable="true"]:focus {
+    background: #fff9db;
+    box-shadow: inset 0 0 0 2px #0a6cd6;
+    outline: none;
 }
 
-.firma-label {
-    font-size: 7.5pt;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-/* ---- Encabezado Kardex ---- */
+/* ============================================
+   ENCABEZADO KARDEX (tabla cabecera de campos)
+   ============================================ */
 .kardex-enc {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .kardex-enc td {
     border: 1px solid #000;
-    padding: 4px 8px;
-    font-size: 8.5pt;
+    padding: 3px 7px;
+    font-size: 8pt;
     color: #000;
 }
 
 .enc-lab {
     font-weight: 700;
-    background: #e3e9ef;
+    background: #dbe3ea;
     color: #000;
-    width: 200px;
+    width: 180px;
 }
 
-.enc-val {
-    font-weight: 600;
-    min-width: 220px;
+.enc-val { font-weight: 600; min-width: 200px; }
+.enc-vacio { background: #fff; }
+
+/* ============================================
+   FIRMAS (Entrega)
+   ============================================ */
+.firmas {
+    display: flex;
+    justify-content: space-between;
+    padding: 28px 40px 6px;
 }
 
-.enc-vacio {
-    background: #fdfdfd;
+.firma { text-align: center; width: 280px; }
+
+.firma-linea {
+    border-bottom: 1px solid #000;
+    margin-bottom: 5px;
 }
 
-/* ---- Lugar y fecha / Firma de autoridad (Kardex) ---- */
-.kardex-lugar {
-    margin: 18px 0 8px;
-    font-size: 9pt;
-}
-
-.kardex-lugar .k-lbl {
+.firma-label {
+    font-size: 7pt;
     font-weight: 700;
+    letter-spacing: 1px;
 }
 
-.kardex-lugar .k-val {
-    font-weight: 600;
-}
+/* ============================================
+   KARDEX - Lugar y firma autoridad
+   ============================================ */
+.kardex-lugar { margin: 16px 0 6px; font-size: 8.5pt; }
+.kardex-lugar .k-lbl { font-weight: 700; }
+.kardex-lugar .k-val { font-weight: 600; }
 
 .firma-autoridad {
     text-align: right;
-    margin: 26px 10px 24px 0;
+    margin: 22px 10px 20px 0;
 }
 
 .firma-autoridad .fa-linea {
     border-bottom: 1px solid #000;
-    width: 280px;
+    width: 260px;
     margin-left: auto;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
 }
 
 .firma-autoridad .fa-label {
-    font-size: 8pt;
+    font-size: 7.5pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-/* ---- ESCALA DE VALORACIÓN (Kardex) ---- */
+/* ============================================
+   ESCALA DE VALORACION (Kardex)
+   ============================================ */
 .tabla-escala {
     width: 100%;
     border-collapse: collapse;
-    font-size: 8pt;
+    font-size: 7.5pt;
 }
 
 .tabla-escala td {
     border: 1px solid #000;
-    padding: 4px 8px;
+    padding: 3px 7px;
     text-align: center;
     white-space: nowrap;
     color: #000;
@@ -285,80 +472,46 @@
     color: #000;
 }
 
-.tabla-escala .es-der {
-    font-weight: 700;
-    text-align: right;
-}
+.tabla-escala .es-der { font-weight: 700; text-align: right; }
 
 .tabla-escala .es-nota {
     text-align: center;
     font-style: italic;
-    padding: 6px 8px;
+    padding: 5px 7px;
 }
 
 /* ============================================
-   MODO OSCURO: las hojas siempre se ven como papel
-   (fondo blanco y texto negro)
+   MODO OSCURO: hojas siempre como papel
    ============================================ */
-body.dark-mode .sheet {
-    background: #fff;
-}
-
+body.dark-mode .sheet { background: #fff; }
 body.dark-mode .sheet,
 body.dark-mode .sheet th,
-body.dark-mode .sheet td {
-    color: #000;
-}
-
-body.dark-mode .historial-container h1 {
-    color: #fff;
-}
+body.dark-mode .sheet td { color: #000; }
+body.dark-mode .historial-container h1 { color: #fff; }
+body.dark-mode .planilla-tools { border-color: rgba(0,0,0,.3); background: #eef2f5; }
 
 /* ============================================
-   IMPRESIÓN (A4 horizontal)
+   IMPRESION
+   Nota: kardex (estudiante) imprime en portrait;
+   entrega y centralizador inyectan @page landscape
+   desde su propia vista (cascada posterior).
    ============================================ */
 @media print {
-    @page {
-        size: A4 landscape;
-        margin: 8mm 7mm;
-    }
-
-    body {
-        background: #fff !important;
-    }
-
-    .menu-lateral,
-    canvas,
-    .top-header,
-    .btn,
-    .modo-switch,
-    .filtro-form {
-        display: none !important;
-    }
-
-    .historial-container {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .historial-container h1 {
-        display: none !important;
-    }
-
+    @page { size: A4 portrait; margin: 7mm; }
+    body { background: #fff !important; }
+    .menu-lateral, canvas, .top-header, .btn, .modo-switch, .filtro-form, .planilla-tools, .planilla-aviso { display: none !important; }
+    .planilla-acciones, .export-form, .centralizador-actions .export-form { display: none !important; }
+    .historial-container { margin: 0 !important; padding: 0 !important; }
+    .historial-container h1 { display: none !important; }
     .sheet {
         background: #fff !important;
-        border: none !important;
+        border: 2px solid #000 !important;
         box-shadow: none !important;
         border-radius: 0 !important;
-        padding: 0 !important;
+        padding: 0 6px 10px !important;
         min-width: 0 !important;
     }
-
-    .sheet-title {
-        border: 1.5px solid #000;
-        font-size: 13pt;
-    }
-
+    .sheet-title { border: 1px solid #000; font-size: 13pt; }
     .tabla-fields td,
     .kardex-enc td,
     .tabla-entrega th,
@@ -369,7 +522,6 @@ body.dark-mode .historial-container h1 {
         border: 1px solid #000 !important;
         color: #000 !important;
     }
-
     .tabla-entrega th,
     .tabla-kardex th,
     .tabla-fields .f-lbl,
@@ -378,7 +530,10 @@ body.dark-mode .historial-container h1 {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-
+    .tabla-entrega tbody tr td,
+    .tabla-kardex tbody tr td {
+        border-bottom: 2.5px solid #000 !important;
+    }
     .firma-linea,
     .kardex-lugar .k-val,
     .firma-autoridad .fa-linea {
